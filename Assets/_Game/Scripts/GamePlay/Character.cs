@@ -15,6 +15,8 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private float animatorDampTime = 0.12f;
 
     private CharacterController characterController;
+    private Health health;
+    private DamageCaster damageCaster;
     private Rigidbody rb;
     private Animator animator;
     private Vector3 smoothedMoveDirection;
@@ -27,6 +29,8 @@ public abstract class Character : MonoBehaviour
     protected virtual void Awake()
     {
         characterController = GetComponent<CharacterController>();
+        health = GetComponent<Health>();
+        damageCaster = GetComponentInChildren<DamageCaster>();
         Rigidbody attachedRigidbody = GetComponent<Rigidbody>();
 
         if (characterController != null && attachedRigidbody != null)
@@ -73,6 +77,11 @@ public abstract class Character : MonoBehaviour
         targetMoveDirection.y = 0f;
         targetMoveDirection = Vector3.ClampMagnitude(targetMoveDirection, 1f);
 
+        if (!canMove)
+        {
+            smoothedMoveDirection = Vector3.zero;
+        }
+
         bool hasMoveInput = targetMoveDirection.sqrMagnitude > MoveInputThreshold;
         float acceleration = hasMoveInput ? moveAcceleration : moveDeceleration;
         smoothedMoveDirection = Vector3.MoveTowards(
@@ -82,7 +91,7 @@ public abstract class Character : MonoBehaviour
         );
 
         float speed = smoothedMoveDirection.magnitude;
-        float animatorSpeed = hasMoveInput ? speed : 0f;
+        float animatorSpeed = canMove ? speed : 0f;
         SetAnimatorFloat(SpeedParameter, animatorSpeed, hasMoveInput ? animatorDampTime : 0f, deltaTime);
         UpdateMovementState(animatorSpeed);
 
@@ -186,6 +195,11 @@ public abstract class Character : MonoBehaviour
         {
             animator.SetTrigger(parameterName);
         }
+    }
+
+    protected bool HasAnimator()
+    {
+        return animator != null;
     }
 
     public void SwitchToState(CharacterState newState)
@@ -325,5 +339,37 @@ public abstract class Character : MonoBehaviour
 
     protected virtual void AfterMove()
     {
+    }
+
+    public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())
+    {
+        if (health == null)
+        {
+            return;
+        }
+
+        health.ApplyDamage(damage);
+
+        EnemyVFXManager enemyVFXManager = GetComponent<EnemyVFXManager>();
+        if (enemyVFXManager != null)
+        {
+            enemyVFXManager.PlayBeingHitVFX(attackPos);
+        }
+    }
+
+    public void EnableDamageCaster()
+    {
+        if (damageCaster != null)
+        {
+            damageCaster.EnableDamageCaster();
+        }
+    }
+
+    public void DisableDamageCaster()
+    {
+        if (damageCaster != null)
+        {
+            damageCaster.DisableDamageCaster();
+        }
     }
 }
