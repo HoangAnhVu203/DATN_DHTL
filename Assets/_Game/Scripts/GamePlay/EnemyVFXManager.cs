@@ -5,9 +5,11 @@ public class EnemyVFXManager : MonoBehaviour
 {
     private const string BeingHitVFXName = "Particle BeingHit";
 
+    public Transform vfxRoot;
     public VisualEffect footStep;
     public VisualEffect attackVFX;
     public ParticleSystem beingHitVFX;
+    public VisualEffect beingHitSplashVFX;
 
     private void Awake()
     {
@@ -53,6 +55,19 @@ public class EnemyVFXManager : MonoBehaviour
         beingHitVFX.transform.position = transform.position + Vector3.up;
         beingHitVFX.transform.rotation = Quaternion.LookRotation(forceForward);
         beingHitVFX.Play();
+
+        if (beingHitSplashVFX == null)
+        {
+            return;
+        }
+
+        Transform splashParent = vfxRoot != null ? vfxRoot : transform;
+        VisualEffect newSplashVFX = Instantiate(beingHitSplashVFX, splashParent);
+        newSplashVFX.transform.localPosition = new Vector3(0f, 2f, 0f);
+        newSplashVFX.transform.localRotation = beingHitSplashVFX.transform.localRotation;
+        newSplashVFX.transform.localScale = beingHitSplashVFX.transform.localScale;
+        newSplashVFX.SendEvent("OnPlay");
+        Destroy(newSplashVFX.gameObject, 10f);
     }
 
     private void CacheBeingHitVFX()

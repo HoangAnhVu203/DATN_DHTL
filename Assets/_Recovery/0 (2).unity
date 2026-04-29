@@ -1927,11 +1927,6 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!1 &807550402 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 36d5e239ddf1c5843979b26c82f9ad52, type: 3}
-  m_PrefabInstance: {fileID: 1067310639}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -3093,74 +3088,6 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!1 &1431613043
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1431613044}
-  - component: {fileID: 1431613046}
-  - component: {fileID: 1431613045}
-  m_Layer: 0
-  m_Name: DamageCaster
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1431613044
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1431613043}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.15, z: 1}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2006712331}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1431613045
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1431613043}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: abf3024166eece24080ab0405e09a126, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DamageCaster
-  damage: 50
-  targetTag: Player
---- !u!65 &1431613046
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1431613043}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1.8, y: 1, z: 2}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &1489868823
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3856,11 +3783,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DamageCaster
   damage: 30
   targetTag: Enemy
---- !u!1 &1993799266 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 36d5e239ddf1c5843979b26c82f9ad52, type: 3}
-  m_PrefabInstance: {fileID: 1562350825}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2006712327
 GameObject:
   m_ObjectHideFlags: 0
@@ -3966,7 +3888,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 928577530}
-  - {fileID: 1431613044}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2006712332
@@ -3988,11 +3909,6 @@ MonoBehaviour:
   moveAcceleration: 12
   moveDeceleration: 18
   animatorDampTime: 0.12
-  dissolveDelay: 2
-  dissolveDuration: 2
-  dissolveStartHeight: 20
-  dissolveEndHeight: -18
-  itemDrop: {fileID: 7108716012023397961, guid: 0a9bc6fec8932bd4788bef5f36ed5200, type: 3}
   target: {fileID: 2022720098}
   stoppingDistance: 1.5
   attackRange: 1.5
@@ -4012,11 +3928,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9feac41225e5af42bf849685291defa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyVFXManager
-  vfxRoot: {fileID: 97927524}
   footStep: {fileID: 345808697}
   attackVFX: {fileID: 361773821}
   beingHitVFX: {fileID: 1936549846}
-  beingHitSplashVFX: {fileID: 5091917010390914819, guid: d1fe802ee7b6fc24497016910b9375d6, type: 3}
 --- !u!114 &2006712334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4044,8 +3958,6 @@ GameObject:
   - component: {fileID: 2022720100}
   - component: {fileID: 2022720101}
   - component: {fileID: 2022720102}
-  - component: {fileID: 2022720103}
-  - component: {fileID: 2022720104}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -4090,11 +4002,6 @@ MonoBehaviour:
   moveAcceleration: 12
   moveDeceleration: 18
   animatorDampTime: 0.12
-  dissolveDelay: 2
-  dissolveDuration: 2
-  dissolveStartHeight: 20
-  dissolveEndHeight: -18
-  itemDrop: {fileID: 0}
   attackDuration: 0.65
 --- !u!95 &2022720100
 Animator:
@@ -4158,35 +4065,6 @@ MonoBehaviour:
   footStep: {fileID: 950172649}
   Blade_01: {fileID: 1590001620}
   slash: {fileID: 402824766}
---- !u!114 &2022720103
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2022720097}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 76531e87a4a61e242b6f37256be01555, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Health
-  maxHealth: 100
-  currentHealth: 0
---- !u!114 &2022720104
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2022720097}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 739355a4d4275274f8db41dce570f481, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DropWeapons
-  weapons:
-  - {fileID: 807550402}
-  - {fileID: 1993799266}
 --- !u!114 &2046442454
 MonoBehaviour:
   m_ObjectHideFlags: 0

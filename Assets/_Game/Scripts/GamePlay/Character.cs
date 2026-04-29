@@ -1,10 +1,17 @@
+using System.Collections;
 using UnityEngine;
 
 public abstract class Character : MonoBehaviour
 {
     private const string SpeedParameter = "Speed";
     private const string IsGroundedParameter = "IsGrounded";
+    private const string DeadParameter = "Dead";
+    private static readonly int BlinkPropertyId = Shader.PropertyToID("_blink");
+    private static readonly int EnableDissolvePropertyId = Shader.PropertyToID("_enableDissolve");
+    private static readonly int DissolveHeightPropertyId = Shader.PropertyToID("_dissolve_height");
     private const float MoveInputThreshold = 0.001f;
+    private const float BlinkAmount = 0.4f;
+    private const float BlinkDuration = 0.2f;
 
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float rotationSpeed = 12f;
@@ -13,6 +20,11 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private float moveAcceleration = 12f;
     [SerializeField] private float moveDeceleration = 18f;
     [SerializeField] private float animatorDampTime = 0.12f;
+    [SerializeField] private float dissolveDelay = 2f;
+    [SerializeField] private float dissolveDuration = 2f;
+    [SerializeField] private float dissolveStartHeight = 20f;
+    [SerializeField] private float dissolveEndHeight = -18f;
+    [SerializeField] private GameObject itemDrop;
 
     private CharacterController characterController;
     private Health health;
@@ -21,6 +33,11 @@ public abstract class Character : MonoBehaviour
     private Animator animator;
     private Vector3 smoothedMoveDirection;
     private float verticalVelocity;
+    private MaterialPropertyBlock materialPropertyBlock;
+    private SkinnedMeshRenderer[] skinnedMeshRenderers;
+    private Coroutine blinkCoroutine;
+    private Coroutine dissolveCoroutine;
+
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
     protected bool IsGrounded { get; private set; } = true;
@@ -31,7 +48,10 @@ public abstract class Character : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         health = GetComponent<Health>();
         damageCaster = GetComponentInChildren<DamageCaster>();
+        skinnedMeshRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+        materialPropertyBlock = new MaterialPropertyBlock();
         Rigidbody attachedRigidbody = GetComponent<Rigidbody>();
+
 
         if (characterController != null && attachedRigidbody != null)
         {
@@ -71,6 +91,14 @@ public abstract class Character : MonoBehaviour
     private void MoveCharacter(float deltaTime)
     {
         UpdateState(CurrentState, deltaTime);
+
+        if (CurrentState == CharacterState.Dead)
+        {
+            smoothedMoveDirection = Vector3.zero;
+            SetAnimatorFloat(SpeedParameter, 0f, 0f, deltaTime);
+            UpdateMoveEffects(false);
+            return;
+        }
 
         bool canMove = CanMoveInCurrentState();
         Vector3 targetMoveDirection = canMove ? GetMoveDirection() : Vector3.zero;
@@ -329,7 +357,21 @@ public abstract class Character : MonoBehaviour
     protected virtual void OnEnterHurt() { }
     protected virtual void OnUpdateHurt(float deltaTime) { }
     protected virtual void OnExitHurt() { }
-    protected virtual void OnEnterDead() { }
+    protected virtual void OnEnterDead()
+    {
+        smoothedMoveDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        SetAnimatorFloat(SpeedParameter, 0f, 0f, Time.deltaTime);
+        SetAnimatorTrigger(DeadParameter);
+        DisableDamageCaster();
+        StartMaterialDissolve();
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
     protected virtual void OnUpdateDead(float deltaTime) { }
     protected virtual void OnExitDead() { }
 
@@ -343,7 +385,7 @@ public abstract class Character : MonoBehaviour
 
     public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())
     {
-        if (health == null)
+        if (health == null || health.IsDead)
         {
             return;
         }
@@ -355,6 +397,14 @@ public abstract class Character : MonoBehaviour
         {
             enemyVFXManager.PlayBeingHitVFX(attackPos);
         }
+
+        if (health.IsDead)
+        {
+            SwitchToState(CharacterState.Dead);
+            return;
+        }
+
+        PlayMaterialsBlink();
     }
 
     public void EnableDamageCaster()
@@ -370,6 +420,118 @@ public abstract class Character : MonoBehaviour
         if (damageCaster != null)
         {
             damageCaster.DisableDamageCaster();
+        }
+    }
+
+    private void PlayMaterialsBlink()
+    {
+        if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
+        {
+            return;
+        }
+
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+        }
+
+        blinkCoroutine = StartCoroutine(MaterialsBlink());
+    }
+
+    private IEnumerator MaterialsBlink()
+    {
+        SetMaterialsBlink(BlinkAmount);
+
+        yield return new WaitForSeconds(BlinkDuration);
+
+        SetMaterialsBlink(0f);
+        blinkCoroutine = null;
+    }
+
+    private void SetMaterialsBlink(float value)
+    {
+        foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            renderer.GetPropertyBlock(materialPropertyBlock);
+            materialPropertyBlock.SetFloat(BlinkPropertyId, value);
+            renderer.SetPropertyBlock(materialPropertyBlock);
+        }
+    }
+
+    private void StartMaterialDissolve()
+    {
+        if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
+        {
+            return;
+        }
+
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+            blinkCoroutine = null;
+            SetMaterialsBlink(0f);
+        }
+
+        if (dissolveCoroutine != null)
+        {
+            StopCoroutine(dissolveCoroutine);
+        }
+
+        dissolveCoroutine = StartCoroutine(MaterialDissolve());
+    }
+
+    private IEnumerator MaterialDissolve()
+    {
+        SetMaterialsFloat(EnableDissolvePropertyId, 1f);
+        SetMaterialsFloat(DissolveHeightPropertyId, dissolveStartHeight);
+
+        if (dissolveDelay > 0f)
+        {
+            yield return new WaitForSeconds(dissolveDelay);
+        }
+
+        float currentDissolveTime = 0f;
+        float duration = Mathf.Max(0.01f, dissolveDuration);
+
+        while (currentDissolveTime < duration)
+        {
+            currentDissolveTime += Time.deltaTime;
+            float dissolveHeight = Mathf.Lerp(dissolveStartHeight, dissolveEndHeight, currentDissolveTime / duration);
+            SetMaterialsFloat(DissolveHeightPropertyId, dissolveHeight);
+            yield return null;
+        }
+
+        SetMaterialsFloat(DissolveHeightPropertyId, dissolveEndHeight);
+        dissolveCoroutine = null;
+
+        DropItem();
+    }
+
+    private void SetMaterialsFloat(int propertyId, float value)
+    {
+        foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            renderer.GetPropertyBlock(materialPropertyBlock);
+            materialPropertyBlock.SetFloat(propertyId, value);
+            renderer.SetPropertyBlock(materialPropertyBlock);
+        }
+    }
+
+    public void DropItem()
+    {
+        if(itemDrop != null)
+        {
+            Instantiate(itemDrop, new Vector3(transform.position.x, 0.3f, transform.position.z), Quaternion.identity);
         }
     }
 }

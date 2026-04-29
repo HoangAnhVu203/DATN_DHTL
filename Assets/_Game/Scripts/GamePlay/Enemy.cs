@@ -136,6 +136,26 @@ public class Enemy : Character
         TryEnterAttackState();
     }
 
+    protected override void OnEnterDead()
+    {
+        base.OnEnterDead();
+        StopAgentPath();
+
+        if (agent != null)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+
+            if (agent.isOnNavMesh)
+            {
+                agent.nextPosition = transform.position;
+            }
+        }
+
+        target = null;
+        lastMoveDirection = Vector3.zero;
+    }
+
     protected override void OnEnterAttack()
     {
         attackTimer = Mathf.Max(attackDuration, 0f);
