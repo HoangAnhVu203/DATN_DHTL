@@ -21,4 +21,14 @@ public class Health : MonoBehaviour
 
         currentHealth = Mathf.Max(currentHealth - damage, 0);
     }
+
+    public void AddHealth(int health)
+    {
+        currentHealth += health;
+
+        if(currentHealth > maxHealth)
+        {
+            currentHealth = maxHealth;
+        }
+    }
 }

@@ -6,6 +6,7 @@ public abstract class Character : MonoBehaviour
     private const string SpeedParameter = "Speed";
     private const string IsGroundedParameter = "IsGrounded";
     private const string DeadParameter = "Dead";
+    private const string BeingHitParameter = "BeingHit";
     private static readonly int BlinkPropertyId = Shader.PropertyToID("_blink");
     private static readonly int EnableDissolvePropertyId = Shader.PropertyToID("_enableDissolve");
     private static readonly int DissolveHeightPropertyId = Shader.PropertyToID("_dissolve_height");
@@ -20,14 +21,20 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private float moveAcceleration = 12f;
     [SerializeField] private float moveDeceleration = 18f;
     [SerializeField] private float animatorDampTime = 0.12f;
+    [SerializeField] private float hurtDuration = 0.5f;
+    [SerializeField] private float impactDeceleration = 25f;
     [SerializeField] private float dissolveDelay = 2f;
     [SerializeField] private float dissolveDuration = 2f;
     [SerializeField] private float dissolveStartHeight = 20f;
     [SerializeField] private float dissolveEndHeight = -18f;
     [SerializeField] private GameObject itemDrop;
+    [SerializeField] private bool isInvincible;
+    [SerializeField] private float invincibleDuration = 2f;
+    [SerializeField] private int Coin;
+
 
     private CharacterController characterController;
-    private Health health;
+    private Health Health;
     private DamageCaster damageCaster;
     private Rigidbody rb;
     private Animator animator;
@@ -37,16 +44,22 @@ public abstract class Character : MonoBehaviour
     private SkinnedMeshRenderer[] skinnedMeshRenderers;
     private Coroutine blinkCoroutine;
     private Coroutine dissolveCoroutine;
+    private Coroutine invincibleCoroutine;
+    private float hurtTimer;
+    private bool hasEnteredHurtAnimation;
+    private Vector3 impactOnCharacter;
 
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
     protected bool IsGrounded { get; private set; } = true;
     protected float MoveSpeed => moveSpeed;
+    protected virtual float HurtImpactForce => 0f;
+    protected virtual bool CanBecomeInvincible => false;
 
     protected virtual void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        health = GetComponent<Health>();
+        Health = GetComponent<Health>();
         damageCaster = GetComponentInChildren<DamageCaster>();
         skinnedMeshRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
         materialPropertyBlock = new MaterialPropertyBlock();
@@ -95,6 +108,7 @@ public abstract class Character : MonoBehaviour
         if (CurrentState == CharacterState.Dead)
         {
             smoothedMoveDirection = Vector3.zero;
+            impactOnCharacter = Vector3.zero;
             SetAnimatorFloat(SpeedParameter, 0f, 0f, deltaTime);
             UpdateMoveEffects(false);
             return;
@@ -126,11 +140,14 @@ public abstract class Character : MonoBehaviour
         if (characterController != null)
         {
             MoveWithCharacterController(smoothedMoveDirection, speed, canMove, hasMoveInput, deltaTime);
+            ApplyImpact(deltaTime);
             AfterMove();
             return;
         }
 
         UpdateMoveEffects(canMove && hasMoveInput && speed > MoveInputThreshold);
+
+        ApplyImpact(deltaTime);
 
         if (speed <= MoveInputThreshold)
         {
@@ -230,9 +247,9 @@ public abstract class Character : MonoBehaviour
         return animator != null;
     }
 
-    public void SwitchToState(CharacterState newState)
+    public void SwitchToState(CharacterState newState, bool forceRestart = false)
     {
-        if (CurrentState == newState)
+        if (CurrentState == newState && !forceRestart)
         {
             return;
         }
@@ -354,13 +371,54 @@ public abstract class Character : MonoBehaviour
     protected virtual void OnEnterAttack() { }
     protected virtual void OnUpdateAttack(float deltaTime) { }
     protected virtual void OnExitAttack() { }
-    protected virtual void OnEnterHurt() { }
-    protected virtual void OnUpdateHurt(float deltaTime) { }
-    protected virtual void OnExitHurt() { }
+    protected virtual void OnEnterHurt()
+    {
+        hurtTimer = Mathf.Max(hurtDuration, 0f);
+        hasEnteredHurtAnimation = false;
+        smoothedMoveDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        SetAnimatorFloat(SpeedParameter, 0f, 0f, Time.deltaTime);
+        SetAnimatorTrigger(BeingHitParameter);
+        DisableDamageCaster();
+        UpdateMoveEffects(false);
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
+
+    protected virtual void OnUpdateHurt(float deltaTime)
+    {
+        if (HasAnimator())
+        {
+            if (IsHurtAnimationFinished(deltaTime))
+            {
+                FinishHurt();
+            }
+
+            return;
+        }
+
+        hurtTimer -= deltaTime;
+
+        if (hurtTimer <= 0f && !HasAnimator())
+        {
+            FinishHurt();
+        }
+    }
+    protected virtual void OnExitHurt()
+    {
+        impactOnCharacter = Vector3.zero;
+    }
+
     protected virtual void OnEnterDead()
     {
         smoothedMoveDirection = Vector3.zero;
         verticalVelocity = 0f;
+        impactOnCharacter = Vector3.zero;
+        CancelInvincible();
         SetAnimatorFloat(SpeedParameter, 0f, 0f, Time.deltaTime);
         SetAnimatorTrigger(DeadParameter);
         DisableDamageCaster();
@@ -385,12 +443,18 @@ public abstract class Character : MonoBehaviour
 
     public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())
     {
-        if (health == null || health.IsDead)
+        if (isInvincible)
         {
             return;
         }
 
-        health.ApplyDamage(damage);
+        if (Health == null || Health.IsDead)
+        {
+            return;
+        }
+
+        Health.ApplyDamage(damage);
+        StartInvincible();
 
         EnemyVFXManager enemyVFXManager = GetComponent<EnemyVFXManager>();
         if (enemyVFXManager != null)
@@ -398,13 +462,50 @@ public abstract class Character : MonoBehaviour
             enemyVFXManager.PlayBeingHitVFX(attackPos);
         }
 
-        if (health.IsDead)
+        if (Health.IsDead)
         {
             SwitchToState(CharacterState.Dead);
             return;
         }
 
         PlayMaterialsBlink();
+        SwitchToState(CharacterState.Hurt, true);
+        AddImpact(attackPos, HurtImpactForce);
+    }
+
+    private void StartInvincible()
+    {
+        if (!CanBecomeInvincible || invincibleDuration <= 0f)
+        {
+            return;
+        }
+
+        isInvincible = true;
+
+        if (invincibleCoroutine != null)
+        {
+            StopCoroutine(invincibleCoroutine);
+        }
+
+        invincibleCoroutine = StartCoroutine(DelayCancelInvincible());
+    }
+
+    private IEnumerator DelayCancelInvincible()
+    {
+        yield return new WaitForSeconds(invincibleDuration);
+        isInvincible = false;
+        invincibleCoroutine = null;
+    }
+
+    private void CancelInvincible()
+    {
+        if (invincibleCoroutine != null)
+        {
+            StopCoroutine(invincibleCoroutine);
+            invincibleCoroutine = null;
+        }
+
+        isInvincible = false;
     }
 
     public void EnableDamageCaster()
@@ -529,9 +630,122 @@ public abstract class Character : MonoBehaviour
 
     public void DropItem()
     {
-        if(itemDrop != null)
+        if (itemDrop != null)
         {
             Instantiate(itemDrop, new Vector3(transform.position.x, 0.3f, transform.position.z), Quaternion.identity);
         }
     }
+
+    private bool IsHurtAnimationFinished(float deltaTime)
+    {
+        AnimatorStateInfo currentStateInfo = animator.GetCurrentAnimatorStateInfo(0);
+        AnimatorStateInfo nextStateInfo = animator.GetNextAnimatorStateInfo(0);
+        bool isCurrentHurt = currentStateInfo.IsName(BeingHitParameter);
+        bool isNextHurt = animator.IsInTransition(0) && nextStateInfo.IsName(BeingHitParameter);
+
+        if (isCurrentHurt || isNextHurt)
+        {
+            hasEnteredHurtAnimation = true;
+            return isCurrentHurt && !animator.IsInTransition(0) && currentStateInfo.normalizedTime >= 1f;
+        }
+
+        if (hasEnteredHurtAnimation)
+        {
+            return true;
+        }
+
+        hurtTimer -= deltaTime;
+        return hurtTimer <= 0f;
+    }
+
+    private void FinishHurt()
+    {
+        if (CurrentState == CharacterState.Hurt)
+        {
+            SwitchToState(CharacterState.Idle);
+        }
+    }
+
+    private void AddImpact(Vector3 attackerPos, float force)
+    {
+        if (force <= 0f)
+        {
+            return;
+        }
+
+        Vector3 impactDir = transform.position - attackerPos;
+        impactDir.y = 0f;
+
+        if (impactDir.sqrMagnitude <= 0.001f)
+        {
+            impactDir = -transform.forward;
+        }
+        else
+        {
+            impactDir.Normalize();
+        }
+
+        impactOnCharacter = impactDir * force;
+    }
+
+    private void ApplyImpact(float deltaTime)
+    {
+        if (impactOnCharacter.sqrMagnitude <= 0.001f)
+        {
+            impactOnCharacter = Vector3.zero;
+            return;
+        }
+
+        Vector3 impactMovement = impactOnCharacter * deltaTime;
+
+        if (characterController != null)
+        {
+            characterController.Move(impactMovement);
+        }
+        else if (rb != null)
+        {
+            rb.MovePosition(rb.position + impactMovement);
+        }
+        else
+        {
+            transform.position += impactMovement;
+        }
+
+        impactOnCharacter = Vector3.MoveTowards(
+            impactOnCharacter,
+            Vector3.zero,
+            impactDeceleration * deltaTime
+        );
+    }
+
+    public void PickUpItem(PickUp item)
+    {
+        switch (item.type)
+        {
+            case PickUpType.Health:
+                AddHealth(item.value);
+                break;
+
+            case PickUpType.Coin:
+                AddCoin(item.value);
+                break;
+        }
+    }
+
+    private void AddHealth(int health)
+    {
+        Health.AddHealth(health);
+
+        PlayerVFXManager playerVFXManager = GetComponent<PlayerVFXManager>();
+        if (playerVFXManager != null)
+        {
+            playerVFXManager.PlayerHealthVFX();
+        }
+    }
+
+    private void AddCoin(int coin)
+    {
+        Coin += coin;
+    }
+
 }

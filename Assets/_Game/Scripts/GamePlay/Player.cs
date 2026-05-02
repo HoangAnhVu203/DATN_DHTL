@@ -6,11 +6,19 @@ using UnityEngine.InputSystem;
 public class Player : Character
 {
     private const string AttackParameter = "Attack";
+    private const int MaxComboCount = 3;
+    private const float MoveInputThreshold = 0.001f;
 
     [SerializeField] private float attackDuration = 0.65f;
+    [SerializeField] private float hurtImpactForce = 5f;
 
     private PlayerVFXManager vfxManager;
     private float attackTimer;
+    private int currentComboIndex;
+    private int requestedComboCount;
+    private bool cancelQueuedCombosForMove;
+    protected override float HurtImpactForce => hurtImpactForce;
+    protected override bool CanBecomeInvincible => true;
 
     protected override void Awake()
     {
@@ -37,12 +45,19 @@ public class Player : Character
 
     public void Attack()
     {
-        if (CurrentState == CharacterState.Attack)
+        if (CurrentState == CharacterState.Hurt || CurrentState == CharacterState.Dead)
         {
-            BeginAttack();
             return;
         }
 
+        if (CurrentState == CharacterState.Attack)
+        {
+            QueueNextCombo();
+            return;
+        }
+
+        requestedComboCount = 1;
+        cancelQueuedCombosForMove = false;
         SwitchToState(CharacterState.Attack);
     }
 
@@ -50,13 +65,13 @@ public class Player : Character
     {
         if (CurrentState == CharacterState.Attack)
         {
-            SwitchToState(CharacterState.Idle);
+            CompleteCurrentCombo();
         }
     }
 
     protected override void OnEnterAttack()
     {
-        BeginAttack();
+        BeginAttackCombo(1);
     }
 
     protected override void OnUpdateIdle(float deltaTime)
@@ -71,12 +86,33 @@ public class Player : Character
 
     protected override void OnUpdateAttack(float deltaTime)
     {
+        if (HasMoveInput())
+        {
+            cancelQueuedCombosForMove = true;
+            requestedComboCount = currentComboIndex;
+        }
+
+        if (HasAnimator())
+        {
+            return;
+        }
+
         attackTimer -= deltaTime;
 
         if (attackTimer <= 0f)
         {
-            SwitchToState(CharacterState.Idle);
+            CompleteCurrentCombo();
         }
+    }
+
+    protected override void OnExitAttack()
+    {
+        attackTimer = 0f;
+        currentComboIndex = 0;
+        requestedComboCount = 0;
+        cancelQueuedCombosForMove = false;
+        DisableDamageCaster();
+        UpdateMoveEffects(false);
     }
 
     protected override void UpdateMoveEffects(bool isMoving)
@@ -92,6 +128,52 @@ public class Player : Character
         attackTimer = Mathf.Max(attackDuration, 0f);
         SetAnimatorTrigger(AttackParameter);
         UpdateMoveEffects(false);
+    }
+
+    private void BeginAttackCombo(int comboIndex)
+    {
+        currentComboIndex = Mathf.Clamp(comboIndex, 1, MaxComboCount);
+        BeginAttack();
+    }
+
+    private void QueueNextCombo()
+    {
+        if (cancelQueuedCombosForMove || currentComboIndex >= MaxComboCount)
+        {
+            return;
+        }
+
+        requestedComboCount = Mathf.Clamp(requestedComboCount + 1, currentComboIndex, MaxComboCount);
+    }
+
+    private void CompleteCurrentCombo()
+    {
+        if (CurrentState != CharacterState.Attack)
+        {
+            return;
+        }
+
+        if (!cancelQueuedCombosForMove && currentComboIndex < requestedComboCount && currentComboIndex < MaxComboCount)
+        {
+            BeginAttackCombo(currentComboIndex + 1);
+            return;
+        }
+
+        FinishAttack();
+    }
+
+    private void FinishAttack()
+    {
+        requestedComboCount = 0;
+        currentComboIndex = 0;
+        cancelQueuedCombosForMove = false;
+
+        SwitchToState(HasMoveInput() ? CharacterState.Run : CharacterState.Idle);
+    }
+
+    private bool HasMoveInput()
+    {
+        return GetMoveDirection().sqrMagnitude > MoveInputThreshold;
     }
 
     private void CheckEditorAttackInput()

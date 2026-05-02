@@ -140,6 +140,7 @@ public class Enemy : Character
     {
         base.OnEnterDead();
         StopAgentPath();
+        DisableColliders();
 
         if (agent != null)
         {
@@ -154,6 +155,22 @@ public class Enemy : Character
 
         target = null;
         lastMoveDirection = Vector3.zero;
+    }
+
+    protected override void OnEnterHurt()
+    {
+        base.OnEnterHurt();
+        StopAgentPath();
+
+        if (agent != null)
+        {
+            agent.velocity = Vector3.zero;
+
+            if (agent.isOnNavMesh)
+            {
+                agent.nextPosition = transform.position;
+            }
+        }
     }
 
     protected override void OnEnterAttack()
@@ -228,5 +245,15 @@ public class Enemy : Character
         }
 
         lastMoveDirection = Vector3.zero;
+    }
+
+    private void DisableColliders()
+    {
+        Collider[] colliders = GetComponentsInChildren<Collider>();
+
+        foreach (Collider enemyCollider in colliders)
+        {
+            enemyCollider.enabled = false;
+        }
     }
 }
