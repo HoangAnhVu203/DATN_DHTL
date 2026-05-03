@@ -278,6 +278,7 @@ public abstract class Character : MonoBehaviour
     private bool CanMoveInCurrentState()
     {
         return CurrentState != CharacterState.Attack
+            && CurrentState != CharacterState.Slide
             && CurrentState != CharacterState.Hurt
             && CurrentState != CharacterState.Dead;
     }
@@ -298,6 +299,10 @@ public abstract class Character : MonoBehaviour
 
             case CharacterState.Attack:
                 OnEnterAttack();
+                break;
+
+            case CharacterState.Slide:
+                OnEnterSlide();
                 break;
 
             case CharacterState.Hurt:
@@ -326,6 +331,10 @@ public abstract class Character : MonoBehaviour
                 OnUpdateAttack(deltaTime);
                 break;
 
+            case CharacterState.Slide:
+                OnUpdateSlide(deltaTime);
+                break;
+
             case CharacterState.Hurt:
                 OnUpdateHurt(deltaTime);
                 break;
@@ -352,6 +361,10 @@ public abstract class Character : MonoBehaviour
                 OnExitAttack();
                 break;
 
+            case CharacterState.Slide:
+                OnExitSlide();
+                break;
+
             case CharacterState.Hurt:
                 OnExitHurt();
                 break;
@@ -371,6 +384,9 @@ public abstract class Character : MonoBehaviour
     protected virtual void OnEnterAttack() { }
     protected virtual void OnUpdateAttack(float deltaTime) { }
     protected virtual void OnExitAttack() { }
+    protected virtual void OnEnterSlide() { }
+    protected virtual void OnUpdateSlide(float deltaTime) { }
+    protected virtual void OnExitSlide() { }
     protected virtual void OnEnterHurt()
     {
         hurtTimer = Mathf.Max(hurtDuration, 0f);
@@ -439,6 +455,35 @@ public abstract class Character : MonoBehaviour
 
     protected virtual void AfterMove()
     {
+    }
+
+    protected void MoveBy(Vector3 movement)
+    {
+        if (characterController != null)
+        {
+            characterController.Move(movement);
+            return;
+        }
+
+        if (rb != null)
+        {
+            rb.MovePosition(rb.position + movement);
+            return;
+        }
+
+        transform.position += movement;
+    }
+
+    protected void RotateTowards(Vector3 direction, float deltaTime)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= MoveInputThreshold)
+        {
+            return;
+        }
+
+        Rotate(direction.normalized, deltaTime);
     }
 
     public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())

@@ -6,17 +6,22 @@ using UnityEngine.InputSystem;
 public class Player : Character
 {
     private const string AttackParameter = "Attack";
+    private const string SlideParameter = "Slide";
     private const int MaxComboCount = 3;
     private const float MoveInputThreshold = 0.001f;
 
     [SerializeField] private float attackDuration = 0.65f;
+    [SerializeField] private float slideDuration = 0.5f;
+    [SerializeField] private float slideDistance = 3f;
     [SerializeField] private float hurtImpactForce = 5f;
 
     private PlayerVFXManager vfxManager;
     private float attackTimer;
+    private float slideTimer;
     private int currentComboIndex;
     private int requestedComboCount;
     private bool cancelQueuedCombosForMove;
+    private Vector3 slideDirection;
     protected override float HurtImpactForce => hurtImpactForce;
     protected override bool CanBecomeInvincible => true;
 
@@ -45,7 +50,9 @@ public class Player : Character
 
     public void Attack()
     {
-        if (CurrentState == CharacterState.Hurt || CurrentState == CharacterState.Dead)
+        if (CurrentState == CharacterState.Slide
+            || CurrentState == CharacterState.Hurt
+            || CurrentState == CharacterState.Dead)
         {
             return;
         }
@@ -69,23 +76,57 @@ public class Player : Character
         }
     }
 
+    public void Slide()
+    {
+        if (CurrentState == CharacterState.Attack
+            || CurrentState == CharacterState.Slide
+            || CurrentState == CharacterState.Hurt
+            || CurrentState == CharacterState.Dead)
+        {
+            return;
+        }
+
+        slideDirection = GetSlideDirection();
+        SwitchToState(CharacterState.Slide, true);
+    }
+
+    public void SlideAnimationEnds()
+    {
+        if (CurrentState == CharacterState.Slide)
+        {
+            FinishSlide();
+        }
+    }
+
     protected override void OnEnterAttack()
     {
         BeginAttackCombo(1);
     }
 
+    protected override void OnEnterSlide()
+    {
+        slideTimer = Mathf.Max(slideDuration, 0f);
+        DisableDamageCaster();
+        SetAnimatorTrigger(SlideParameter);
+        UpdateMoveEffects(false);
+    }
+
     protected override void OnUpdateIdle(float deltaTime)
     {
         CheckEditorAttackInput();
+        CheckEditorSlideInput();
     }
 
     protected override void OnUpdateRun(float deltaTime)
     {
         CheckEditorAttackInput();
+        CheckEditorSlideInput();
     }
 
     protected override void OnUpdateAttack(float deltaTime)
     {
+        CheckEditorAttackInput();
+
         if (HasMoveInput())
         {
             cancelQueuedCombosForMove = true;
@@ -112,6 +153,37 @@ public class Player : Character
         requestedComboCount = 0;
         cancelQueuedCombosForMove = false;
         DisableDamageCaster();
+        UpdateMoveEffects(false);
+    }
+
+    protected override void OnUpdateSlide(float deltaTime)
+    {
+        if (slideTimer > 0f)
+        {
+            float duration = Mathf.Max(slideDuration, 0.01f);
+            float movementDeltaTime = Mathf.Min(deltaTime, slideTimer);
+            Vector3 movement = slideDirection * (slideDistance / duration) * movementDeltaTime;
+            MoveBy(movement);
+            slideTimer -= deltaTime;
+        }
+
+        RotateTowards(slideDirection, deltaTime);
+
+        if (HasAnimator())
+        {
+            return;
+        }
+
+        if (slideTimer <= 0f)
+        {
+            FinishSlide();
+        }
+    }
+
+    protected override void OnExitSlide()
+    {
+        slideTimer = 0f;
+        slideDirection = Vector3.zero;
         UpdateMoveEffects(false);
     }
 
@@ -176,13 +248,64 @@ public class Player : Character
         return GetMoveDirection().sqrMagnitude > MoveInputThreshold;
     }
 
+    private Vector3 GetSlideDirection()
+    {
+        Vector3 direction = GetMoveDirection();
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= MoveInputThreshold)
+        {
+            direction = transform.forward;
+            direction.y = 0f;
+        }
+
+        if (direction.sqrMagnitude <= MoveInputThreshold)
+        {
+            return Vector3.forward;
+        }
+
+        return direction.normalized;
+    }
+
+    private void FinishSlide()
+    {
+        if (CurrentState == CharacterState.Slide)
+        {
+            SwitchToState(HasMoveInput() ? CharacterState.Run : CharacterState.Idle);
+        }
+    }
+
     private void CheckEditorAttackInput()
     {
-#if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
+#if UNITY_EDITOR
+#if ENABLE_INPUT_SYSTEM
         if (Keyboard.current != null && Keyboard.current.enterKey.wasPressedThisFrame)
         {
             Attack();
         }
+#else
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            Attack();
+        }
+#endif
+#endif
+    }
+
+    private void CheckEditorSlideInput()
+    {
+#if UNITY_EDITOR
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            Slide();
+        }
+#else
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Slide();
+        }
+#endif
 #endif
     }
 

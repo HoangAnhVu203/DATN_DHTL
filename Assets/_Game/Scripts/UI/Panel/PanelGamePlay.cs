@@ -10,6 +10,7 @@ public class PanelGamePlay : UICanvas
     private const string PlayerTag = "Player";
 
     [SerializeField] private Button attackButton;
+    [SerializeField] private Button slideButton;
 
     private Player player;
 
@@ -19,7 +20,12 @@ public class PanelGamePlay : UICanvas
 
         if (attackButton == null)
         {
-            attackButton = GetComponentInChildren<Button>(true);
+            attackButton = FindButtonByName("Skill1") ?? GetComponentInChildren<Button>(true);
+        }
+
+        if (slideButton == null)
+        {
+            slideButton = FindButtonByName("Skill2 - Slide");
         }
 
         CachePlayer();
@@ -29,6 +35,12 @@ public class PanelGamePlay : UICanvas
             attackButton.onClick.RemoveListener(OnAttackButtonClicked);
             attackButton.onClick.AddListener(OnAttackButtonClicked);
         }
+
+        if (slideButton != null)
+        {
+            slideButton.onClick.RemoveListener(OnSlideButtonClicked);
+            slideButton.onClick.AddListener(OnSlideButtonClicked);
+        }
     }
 
     private void OnDisable()
@@ -36,6 +48,11 @@ public class PanelGamePlay : UICanvas
         if (attackButton != null)
         {
             attackButton.onClick.RemoveListener(OnAttackButtonClicked);
+        }
+
+        if (slideButton != null)
+        {
+            slideButton.onClick.RemoveListener(OnSlideButtonClicked);
         }
     }
 
@@ -50,6 +67,34 @@ public class PanelGamePlay : UICanvas
         {
             player.Attack();
         }
+    }
+
+    public void OnSlideButtonClicked()
+    {
+        if (player == null)
+        {
+            CachePlayer();
+        }
+
+        if (player != null)
+        {
+            player.Slide();
+        }
+    }
+
+    private Button FindButtonByName(string buttonName)
+    {
+        Button[] buttons = GetComponentsInChildren<Button>(true);
+
+        foreach (Button button in buttons)
+        {
+            if (button != null && button.gameObject.name == buttonName)
+            {
+                return button;
+            }
+        }
+
+        return null;
     }
 
     private void CachePlayer()
