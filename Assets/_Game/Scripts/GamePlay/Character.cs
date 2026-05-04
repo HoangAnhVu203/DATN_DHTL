@@ -7,6 +7,7 @@ public abstract class Character : MonoBehaviour
     private const string IsGroundedParameter = "IsGrounded";
     private const string DeadParameter = "Dead";
     private const string BeingHitParameter = "BeingHit";
+    private const string PlayerTag = "Player";
     private static readonly int BlinkPropertyId = Shader.PropertyToID("_blink");
     private static readonly int EnableDissolvePropertyId = Shader.PropertyToID("_enableDissolve");
     private static readonly int DissolveHeightPropertyId = Shader.PropertyToID("_dissolve_height");
@@ -48,6 +49,7 @@ public abstract class Character : MonoBehaviour
     private float hurtTimer;
     private bool hasEnteredHurtAnimation;
     private Vector3 impactOnCharacter;
+    private Transform targetPlayer;
 
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
@@ -793,4 +795,32 @@ public abstract class Character : MonoBehaviour
         Coin += coin;
     }
 
+    public void RotateToTarget()
+    {
+        if (CurrentState == CharacterState.Dead)
+        {
+            return;
+        }
+
+        if (targetPlayer == null)
+        {
+            GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
+            if (playerObject == null)
+            {
+                return;
+            }
+
+            targetPlayer = playerObject.transform;
+        }
+
+        Vector3 direction = targetPlayer.position - transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= MoveInputThreshold)
+        {
+            return;
+        }
+
+        transform.rotation = Quaternion.LookRotation(direction.normalized);
+    }
 }

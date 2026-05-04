@@ -6,6 +6,7 @@ public class DamageCaster : MonoBehaviour
 {
     private Collider damageCasterCollider;
     private PlayerVFXManager ownerVFXManager;
+    private Character ownerCharacter;
     private Transform ownerRoot;
 
     public int damage = 30;
@@ -18,7 +19,8 @@ public class DamageCaster : MonoBehaviour
         damageCasterCollider.isTrigger = true;
         damageCasterCollider.enabled = false;
         ownerVFXManager = GetComponentInParent<PlayerVFXManager>();
-        ownerRoot = GetComponentInParent<Character>()?.transform;
+        ownerCharacter = GetComponentInParent<Character>();
+        ownerRoot = ownerCharacter != null ? ownerCharacter.transform : null;
         damageTargetList = new List<Character>();
     }
 
@@ -34,6 +36,14 @@ public class DamageCaster : MonoBehaviour
 
     private void TryApplyDamage(Collider other)
     {
+        DamageOrb damageOrb = other.GetComponentInParent<DamageOrb>();
+        if (damageOrb != null && ownerCharacter is Player)
+        {
+            damageOrb.DestroyOrb();
+            PlayHitVFX(other);
+            return;
+        }
+
         Character targetCharacter = other.GetComponentInParent<Character>();
         if (targetCharacter == null
             || !targetCharacter.CompareTag(targetTag)
