@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -28,6 +29,8 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private float dissolveDuration = 2f;
     [SerializeField] private float dissolveStartHeight = 20f;
     [SerializeField] private float dissolveEndHeight = -18f;
+    [SerializeField] private bool playSpawnDissolveOnStart;
+    [SerializeField] private float spawnDissolveDelay;
     [SerializeField] private GameObject itemDrop;
     [SerializeField] private bool isInvincible;
     [SerializeField] private float invincibleDuration = 2f;
@@ -50,9 +53,13 @@ public abstract class Character : MonoBehaviour
     private bool hasEnteredHurtAnimation;
     private Vector3 impactOnCharacter;
     private Transform targetPlayer;
+    private bool isSpawnDissolving;
+    private bool hasNotifiedDeath;
 
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
+    public bool IsSpawnDissolving => isSpawnDissolving;
+    public event Action<Character> Died;
     protected bool IsGrounded { get; private set; } = true;
     protected float MoveSpeed => moveSpeed;
     protected virtual float HurtImpactForce => 0f;
@@ -81,6 +88,11 @@ public abstract class Character : MonoBehaviour
     protected virtual void Start()
     {
         EnterState(CurrentState);
+
+        if (playSpawnDissolveOnStart)
+        {
+            PlaySpawnDissolve();
+        }
     }
 
     private void Update()
@@ -105,8 +117,6 @@ public abstract class Character : MonoBehaviour
 
     private void MoveCharacter(float deltaTime)
     {
-        UpdateState(CurrentState, deltaTime);
-
         if (CurrentState == CharacterState.Dead)
         {
             smoothedMoveDirection = Vector3.zero;
@@ -115,6 +125,18 @@ public abstract class Character : MonoBehaviour
             UpdateMoveEffects(false);
             return;
         }
+
+        if (isSpawnDissolving)
+        {
+            smoothedMoveDirection = Vector3.zero;
+            impactOnCharacter = Vector3.zero;
+            SetAnimatorFloat(SpeedParameter, 0f, 0f, deltaTime);
+            UpdateMoveEffects(false);
+            AfterMove();
+            return;
+        }
+
+        UpdateState(CurrentState, deltaTime);
 
         bool canMove = CanMoveInCurrentState();
         Vector3 targetMoveDirection = canMove ? GetMoveDirection() : Vector3.zero;
@@ -251,6 +273,14 @@ public abstract class Character : MonoBehaviour
 
     public void SwitchToState(CharacterState newState, bool forceRestart = false)
     {
+        if (isSpawnDissolving
+            && newState != CharacterState.Idle
+            && newState != CharacterState.Hurt
+            && newState != CharacterState.Dead)
+        {
+            return;
+        }
+
         if (CurrentState == newState && !forceRestart)
         {
             return;
@@ -279,7 +309,8 @@ public abstract class Character : MonoBehaviour
 
     private bool CanMoveInCurrentState()
     {
-        return CurrentState != CharacterState.Attack
+        return !isSpawnDissolving
+            && CurrentState != CharacterState.Attack
             && CurrentState != CharacterState.Slide
             && CurrentState != CharacterState.Hurt
             && CurrentState != CharacterState.Dead;
@@ -436,6 +467,7 @@ public abstract class Character : MonoBehaviour
         smoothedMoveDirection = Vector3.zero;
         verticalVelocity = 0f;
         impactOnCharacter = Vector3.zero;
+        NotifyDied();
         CancelInvincible();
         SetAnimatorFloat(SpeedParameter, 0f, 0f, Time.deltaTime);
         SetAnimatorTrigger(DeadParameter);
@@ -450,6 +482,17 @@ public abstract class Character : MonoBehaviour
     }
     protected virtual void OnUpdateDead(float deltaTime) { }
     protected virtual void OnExitDead() { }
+
+    private void NotifyDied()
+    {
+        if (hasNotifiedDeath)
+        {
+            return;
+        }
+
+        hasNotifiedDeath = true;
+        Died?.Invoke(this);
+    }
 
     protected virtual void UpdateMoveEffects(bool isMoving)
     {
@@ -630,7 +673,64 @@ public abstract class Character : MonoBehaviour
             StopCoroutine(dissolveCoroutine);
         }
 
+        isSpawnDissolving = false;
         dissolveCoroutine = StartCoroutine(MaterialDissolve());
+    }
+
+    public void PlaySpawnDissolve()
+    {
+        if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
+        {
+            return;
+        }
+
+        if (CurrentState == CharacterState.Dead)
+        {
+            return;
+        }
+
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+            blinkCoroutine = null;
+            SetMaterialsBlink(0f);
+        }
+
+        if (dissolveCoroutine != null)
+        {
+            StopCoroutine(dissolveCoroutine);
+        }
+
+        dissolveCoroutine = StartCoroutine(MaterialSpawnDissolve());
+    }
+
+    private IEnumerator MaterialSpawnDissolve()
+    {
+        isSpawnDissolving = true;
+        DisableDamageCaster();
+        SetMaterialsFloat(EnableDissolvePropertyId, 1f);
+        SetMaterialsFloat(DissolveHeightPropertyId, dissolveEndHeight);
+
+        if (spawnDissolveDelay > 0f)
+        {
+            yield return new WaitForSeconds(spawnDissolveDelay);
+        }
+
+        float currentDissolveTime = 0f;
+        float duration = Mathf.Max(0.01f, dissolveDuration);
+
+        while (currentDissolveTime < duration)
+        {
+            currentDissolveTime += Time.deltaTime;
+            float dissolveHeight = Mathf.Lerp(dissolveEndHeight, dissolveStartHeight, currentDissolveTime / duration);
+            SetMaterialsFloat(DissolveHeightPropertyId, dissolveHeight);
+            yield return null;
+        }
+
+        SetMaterialsFloat(DissolveHeightPropertyId, dissolveStartHeight);
+        SetMaterialsFloat(EnableDissolvePropertyId, 0f);
+        isSpawnDissolving = false;
+        dissolveCoroutine = null;
     }
 
     private IEnumerator MaterialDissolve()
@@ -797,7 +897,7 @@ public abstract class Character : MonoBehaviour
 
     public void RotateToTarget()
     {
-        if (CurrentState == CharacterState.Dead)
+        if (CurrentState == CharacterState.Dead || isSpawnDissolving)
         {
             return;
         }

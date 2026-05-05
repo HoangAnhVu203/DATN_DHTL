@@ -201,6 +201,8 @@ MonoBehaviour:
   dissolveDuration: 2
   dissolveStartHeight: 20
   dissolveEndHeight: -18
+  playSpawnDissolveOnStart: 0
+  spawnDissolveDelay: 0
   itemDrop: {fileID: 7108716012023397961, guid: 0a9bc6fec8932bd4788bef5f36ed5200, type: 3}
   isInvincible: 0
   invincibleDuration: 2
@@ -210,7 +212,7 @@ MonoBehaviour:
   attackRange: 2
   attackDuration: 0.65
   attackTurnSpeed: 12
-  detectionRange: 12
+  detectionRange: 20
   repathInterval: 0.2
 --- !u!114 &1650976010910818354
 MonoBehaviour:
