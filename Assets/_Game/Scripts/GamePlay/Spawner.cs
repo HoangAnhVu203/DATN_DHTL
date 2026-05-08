@@ -4,7 +4,7 @@ using UnityEngine;
 public class Spawner : MonoBehaviour
 {
     [SerializeField] private Transform spawnPointRoot;
-    [SerializeField] private Gate gateToOpen;
+    [SerializeField] private Gate[] gatesToOpen;
 
     private List<SpawnPoint> spawnPointList;
 
@@ -67,9 +67,12 @@ public class Spawner : MonoBehaviour
 
     private void OpenGate()
     {
-        if (gateToOpen != null)
+        foreach (Gate gate in gatesToOpen)
         {
-            gateToOpen.OpenGate();
+            if (gate != null)
+            {
+                gate.OpenGate();
+            }
         }
     }
 
