@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 public class Spawner : MonoBehaviour
@@ -9,9 +10,12 @@ public class Spawner : MonoBehaviour
     private List<SpawnPoint> spawnPointList;
 
     private bool hasSpawned;
+    private bool hasCleared;
     private int aliveEnemyCount;
 
     public new Collider collider;
+    public bool IsCleared => hasCleared;
+    public event Action<Spawner> Cleared;
 
     private void Awake()
     {
@@ -50,7 +54,7 @@ public class Spawner : MonoBehaviour
 
         if (aliveEnemyCount <= 0)
         {
-            OpenGate();
+            ClearSpawner();
         }
     }
 
@@ -61,12 +65,29 @@ public class Spawner : MonoBehaviour
 
         if (aliveEnemyCount <= 0)
         {
-            OpenGate();
+            ClearSpawner();
         }
+    }
+
+    private void ClearSpawner()
+    {
+        if (hasCleared)
+        {
+            return;
+        }
+
+        hasCleared = true;
+        OpenGate();
+        Cleared?.Invoke(this);
     }
 
     private void OpenGate()
     {
+        if (gatesToOpen == null)
+        {
+            return;
+        }
+
         foreach (Gate gate in gatesToOpen)
         {
             if (gate != null)
