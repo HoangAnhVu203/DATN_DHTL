@@ -59,7 +59,9 @@ public abstract class Character : MonoBehaviour
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
     public bool IsSpawnDissolving => isSpawnDissolving;
+    public int CoinAmount => Coin;
     public event Action<Character> Died;
+    public event Action<int> CoinChanged;
     protected bool IsGrounded { get; private set; } = true;
     protected float MoveSpeed => moveSpeed;
     protected virtual float HurtImpactForce => 0f;
@@ -893,6 +895,7 @@ public abstract class Character : MonoBehaviour
     private void AddCoin(int coin)
     {
         Coin += coin;
+        CoinChanged?.Invoke(Coin);
     }
 
     public void RotateToTarget()

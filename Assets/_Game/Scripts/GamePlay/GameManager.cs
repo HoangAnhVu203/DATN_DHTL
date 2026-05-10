@@ -3,17 +3,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public enum GameState
-{
-    Loading,
-    Home,
-    StartMatch,
-    Pause,
-    EndMatch,
-    Victory,
-    Lose
-}
-
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
@@ -21,12 +10,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameState initialState = GameState.Loading;
     [SerializeField] private GameState stateAfterLoading = GameState.StartMatch;
     [SerializeField] private float loadingDuration = 0.5f;
+    [SerializeField] private float loseDelayAfterPlayerDeath = 5f;
     [SerializeField] private bool autoFindSceneObjects = true;
     [SerializeField] private bool openGameplayUIOnStartMatch = true;
     [SerializeField] private Player player;
     [SerializeField] private Spawner[] spawners;
 
     private Coroutine loadingCoroutine;
+    private Coroutine delayedLoseCoroutine;
     private bool hasFinishedMatch;
     private bool hasEnteredState;
 
@@ -59,6 +50,7 @@ public class GameManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        StopDelayedLose();
         UnsubscribeSceneEvents();
 
         if (Instance == this)
@@ -89,12 +81,14 @@ public class GameManager : MonoBehaviour
     public void GoHome()
     {
         hasFinishedMatch = false;
+        StopDelayedLose();
         ChangeState(GameState.Home);
     }
 
     public void StartMatch()
     {
         hasFinishedMatch = false;
+        StopDelayedLose();
         ChangeState(GameState.StartMatch);
     }
 
@@ -289,7 +283,34 @@ public class GameManager : MonoBehaviour
 
     private void OnPlayerDied(Character deadCharacter)
     {
+        if (delayedLoseCoroutine != null || hasFinishedMatch)
+        {
+            return;
+        }
+
+        delayedLoseCoroutine = StartCoroutine(DelayLoseAfterPlayerDeath());
+    }
+
+    private IEnumerator DelayLoseAfterPlayerDeath()
+    {
+        if (loseDelayAfterPlayerDeath > 0f)
+        {
+            yield return new WaitForSeconds(loseDelayAfterPlayerDeath);
+        }
+
+        delayedLoseCoroutine = null;
         Lose();
+    }
+
+    private void StopDelayedLose()
+    {
+        if (delayedLoseCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(delayedLoseCoroutine);
+        delayedLoseCoroutine = null;
     }
 
     private void OnSpawnerCleared(Spawner clearedSpawner)
