@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3ca55d560d7f15448985ffe8a537128, type: 3}
+  m_Name: SupabaseConfic
+  m_EditorClassIdentifier: Assembly-CSharp::SupabaseConfig
+  SupabaseUrl: https://nbbjzottnzhpnnuixlpl.supabase.co
+  FunctionUrl: https://nbbjzottnzhpnnuixlpl.supabase.co/functions/v1
+  AnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iYmp6b3R0bnpocG5udWl4bHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzE1NjYsImV4cCI6MjA5MTE0NzU2Nn0.dFG8nP2lIOVE0lihYs3RIEh_ZtrGiGbxYvrzMFBDF7k

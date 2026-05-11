@@ -1,0 +1,250 @@
+using System;
+using System.Collections;
+using System.Text;
+using UnityEngine;
+using UnityEngine.Networking;
+
+public class AuthService : MonoBehaviour
+{
+    [SerializeField] private SupabaseConfig config;
+
+    public IEnumerator SignIn(string email, string password, Action<bool, string> callback)
+    {
+        if (!HasValidConfig(callback))
+        {
+            yield break;
+        }
+
+        string url = $"{config.SupabaseUrl}/auth/v1/token?grant_type=password";
+
+        string jsonBody = JsonUtility.ToJson(new SignInRequest
+        {
+            email = email,
+            password = password
+        });
+
+        using UnityWebRequest request = new UnityWebRequest(url, "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {config.AnonKey}");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+
+        if (request.responseCode < 200 || request.responseCode >= 300)
+        {
+            callback?.Invoke(false, BuildErrorMessage(request.responseCode, request.error, responseText));
+            yield break;
+        }
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            callback?.Invoke(false, BuildErrorMessage(request.responseCode, request.error, responseText));
+            yield break;
+        }
+
+        AuthResponse response = JsonUtility.FromJson<AuthResponse>(responseText);
+
+        if (response == null || string.IsNullOrEmpty(response.access_token) || response.user == null)
+        {
+            callback?.Invoke(false, $"Supabase returned an invalid auth response: {responseText}");
+            yield break;
+        }
+
+        SupabaseSession.AccessToken = response.access_token;
+        SupabaseSession.RefreshToken = response.refresh_token;
+        SupabaseSession.UserId = response.user.id;
+        SupabaseSession.Email = response.user.email;
+        SupabaseSession.DisplayName = response.user.GetDisplayName();
+
+        yield return LoadUserProfileDisplayName(SupabaseSession.UserId, displayName =>
+        {
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                SupabaseSession.DisplayName = displayName;
+            }
+        });
+
+        callback?.Invoke(true, SupabaseSession.DisplayName);
+    }
+
+    private IEnumerator LoadUserProfileDisplayName(string userId, Action<string> callback)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        string escapedUserId = Uri.EscapeDataString(userId);
+        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{escapedUserId}&select=display_name,username";
+
+        using UnityWebRequest request = UnityWebRequest.Get(url);
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
+        request.SetRequestHeader("Accept", "application/json");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+
+        if (request.responseCode < 200 || request.responseCode >= 300 || request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogWarning(BuildErrorMessage(request.responseCode, request.error, responseText));
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        UserProfile[] profiles = FromJsonArray<UserProfile>(responseText);
+        if (profiles == null || profiles.Length == 0)
+        {
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        callback?.Invoke(profiles[0].GetDisplayName());
+    }
+
+    private bool HasValidConfig(Action<bool, string> callback)
+    {
+        if (config == null)
+        {
+            callback?.Invoke(false, "Supabase config is not assigned on AuthService.");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(config.SupabaseUrl) || string.IsNullOrWhiteSpace(config.AnonKey))
+        {
+            callback?.Invoke(false, "Supabase URL or anon key is empty.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private string BuildErrorMessage(long statusCode, string requestError, string responseText)
+    {
+        if (!string.IsNullOrWhiteSpace(responseText))
+        {
+            return $"HTTP {statusCode}: {responseText}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestError))
+        {
+            return $"HTTP {statusCode}: {requestError}";
+        }
+
+        return $"HTTP {statusCode}: Supabase request failed.";
+    }
+
+    [Serializable]
+    private class SignInRequest
+    {
+        public string email;
+        public string password;
+    }
+
+    [Serializable]
+    private class AuthResponse
+    {
+        public string access_token;
+        public string refresh_token;
+        public AuthUser user;
+    }
+
+    [Serializable]
+    private class AuthUser
+    {
+        public string id;
+        public string email;
+        public UserMetadata user_metadata;
+
+        public string GetDisplayName()
+        {
+            if (user_metadata != null)
+            {
+                if (!string.IsNullOrWhiteSpace(user_metadata.display_name))
+                {
+                    return user_metadata.display_name;
+                }
+
+                if (!string.IsNullOrWhiteSpace(user_metadata.username))
+                {
+                    return user_metadata.username;
+                }
+
+                if (!string.IsNullOrWhiteSpace(user_metadata.full_name))
+                {
+                    return user_metadata.full_name;
+                }
+
+                if (!string.IsNullOrWhiteSpace(user_metadata.name))
+                {
+                    return user_metadata.name;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                int atIndex = email.IndexOf('@');
+                return atIndex > 0 ? email.Substring(0, atIndex) : email;
+            }
+
+            return "Player";
+        }
+    }
+
+    [Serializable]
+    private class UserMetadata
+    {
+        public string display_name;
+        public string username;
+        public string full_name;
+        public string name;
+    }
+
+    [Serializable]
+    private class UserProfile
+    {
+        public string display_name;
+        public string username;
+
+        public string GetDisplayName()
+        {
+            if (!string.IsNullOrWhiteSpace(display_name))
+            {
+                return display_name;
+            }
+
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                return username;
+            }
+
+            return null;
+        }
+    }
+
+    [Serializable]
+    private class JsonArrayWrapper<T>
+    {
+        public T[] items;
+    }
+
+    private T[] FromJsonArray<T>(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return Array.Empty<T>();
+        }
+
+        JsonArrayWrapper<T> wrapper = JsonUtility.FromJson<JsonArrayWrapper<T>>($"{{\"items\":{json}}}");
+        return wrapper?.items ?? Array.Empty<T>();
+    }
+}
