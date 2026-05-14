@@ -8,6 +8,55 @@ public class AuthService : MonoBehaviour
 {
     [SerializeField] private SupabaseConfig config;
 
+    public IEnumerator SignUp(string email, string password, Action<bool, string> callback)
+    {
+        if (!HasValidConfig(callback))
+        {
+            yield break;
+        }
+
+        string url = $"{config.SupabaseUrl}/auth/v1/signup";
+
+        string jsonBody = JsonUtility.ToJson(new SignUpRequest
+        {
+            email = email,
+            password = password,
+            data = new UserMetadata
+            {
+                display_name = BuildDefaultDisplayName(email),
+                username = BuildDefaultUsername(email)
+            }
+        });
+
+        using UnityWebRequest request = new UnityWebRequest(url, "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {config.AnonKey}");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+
+        if (request.responseCode < 200 || request.responseCode >= 300)
+        {
+            callback?.Invoke(false, BuildErrorMessage(request.responseCode, request.error, responseText));
+            yield break;
+        }
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            callback?.Invoke(false, BuildErrorMessage(request.responseCode, request.error, responseText));
+            yield break;
+        }
+
+        callback?.Invoke(true, "Đăng ký thành công.");
+    }
+
     public IEnumerator SignIn(string email, string password, Action<bool, string> callback)
     {
         if (!HasValidConfig(callback))
@@ -151,6 +200,14 @@ public class AuthService : MonoBehaviour
     }
 
     [Serializable]
+    private class SignUpRequest
+    {
+        public string email;
+        public string password;
+        public UserMetadata data;
+    }
+
+    [Serializable]
     private class AuthResponse
     {
         public string access_token;
@@ -246,5 +303,34 @@ public class AuthService : MonoBehaviour
 
         JsonArrayWrapper<T> wrapper = JsonUtility.FromJson<JsonArrayWrapper<T>>($"{{\"items\":{json}}}");
         return wrapper?.items ?? Array.Empty<T>();
+    }
+
+    private string BuildDefaultDisplayName(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return "Player";
+        }
+
+        int atIndex = email.IndexOf('@');
+        string localPart = atIndex > 0 ? email.Substring(0, atIndex) : email;
+        return string.IsNullOrWhiteSpace(localPart) ? "Player" : localPart.Trim();
+    }
+
+    private string BuildDefaultUsername(string email)
+    {
+        string source = BuildDefaultDisplayName(email).ToLowerInvariant();
+        StringBuilder usernameBuilder = new StringBuilder(source.Length);
+
+        foreach (char character in source)
+        {
+            if (char.IsLetterOrDigit(character) || character == '_')
+            {
+                usernameBuilder.Append(character);
+            }
+        }
+
+        string username = usernameBuilder.ToString();
+        return string.IsNullOrWhiteSpace(username) ? "player" : username;
     }
 }

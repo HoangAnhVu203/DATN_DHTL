@@ -5,18 +5,35 @@ using UnityEngine.UI;
 public class PanelLogin : MonoBehaviour
 {
     private const string DefaultDisplayNameObjectName = "PlayerDisplayName";
+    private const string LoginModeSubmitText = "Login";
+    private const string LoginModeToggleText = "Register";
+    private const string RegisterModeSubmitText = "Register";
+    private const string RegisterModeToggleText = "Login";
 
     [SerializeField] private AuthService authService;
     [SerializeField] private TMP_InputField emailInput;
     [SerializeField] private TMP_InputField passwordInput;
     [SerializeField] private Button loginButton;
+    [SerializeField] private Button registerToggleButton;
+    [SerializeField] private Text loginButtonText;
+    [SerializeField] private TMP_Text registerToggleText;
     [SerializeField] private Text statusText;
     [SerializeField] private TMP_Text displayNameText;
     [SerializeField] private GameObject panelToHideOnSuccess;
 
+    private bool isRegisterMode;
+
     private void Awake()
     {
-        loginButton.onClick.AddListener(OnLoginClicked);
+        ResolveButtonTextReferences();
+        ResolveRegisterToggleButton();
+
+        loginButton.onClick.AddListener(OnSubmitClicked);
+
+        if (registerToggleButton != null)
+        {
+            registerToggleButton.onClick.AddListener(ToggleMode);
+        }
 
         if (panelToHideOnSuccess == null)
         {
@@ -31,14 +48,21 @@ public class PanelLogin : MonoBehaviour
                 displayNameText = displayNameObject.GetComponent<TMP_Text>();
             }
         }
+
+        RefreshModeText();
     }
 
     private void OnDestroy()
     {
-        loginButton.onClick.RemoveListener(OnLoginClicked);
+        loginButton.onClick.RemoveListener(OnSubmitClicked);
+
+        if (registerToggleButton != null)
+        {
+            registerToggleButton.onClick.RemoveListener(ToggleMode);
+        }
     }
 
-    private void OnLoginClicked()
+    private void OnSubmitClicked()
     {
         string email = emailInput.text.Trim();
         string password = passwordInput.text;
@@ -50,18 +74,27 @@ public class PanelLogin : MonoBehaviour
         }
 
         loginButton.interactable = false;
-        SetStatus("Đang đăng nhập...");
+        SetToggleInteractable(false);
 
+        if (isRegisterMode)
+        {
+            SetStatus("Đang đăng ký...");
+            StartCoroutine(authService.SignUp(email, password, OnRegisterCompleted));
+            return;
+        }
+
+        SetStatus("Đang đăng nhập...");
         StartCoroutine(authService.SignIn(email, password, OnLoginCompleted));
     }
 
     private void OnLoginCompleted(bool success, string message)
     {
         loginButton.interactable = true;
+        SetToggleInteractable(true);
 
         if (!success)
         {
-            SetStatus(GetUserFriendlyError(message));
+            SetStatus(GetUserFriendlyError(message, false));
             Debug.LogError(message);
             return;
         }
@@ -77,6 +110,22 @@ public class PanelLogin : MonoBehaviour
         Debug.Log($"Logged in: {SupabaseSession.UserId} - {SupabaseSession.DisplayName}");
     }
 
+    private void OnRegisterCompleted(bool success, string message)
+    {
+        loginButton.interactable = true;
+        SetToggleInteractable(true);
+
+        if (!success)
+        {
+            SetStatus(GetUserFriendlyError(message, true));
+            Debug.LogError(message);
+            return;
+        }
+
+        SetStatus("Đăng ký thành công.");
+        Debug.Log(message);
+    }
+
     private void SetStatus(string message)
     {
         if (statusText != null)
@@ -85,11 +134,11 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
-    private string GetUserFriendlyError(string error)
+    private string GetUserFriendlyError(string error, bool registerContext)
     {
         if (string.IsNullOrWhiteSpace(error))
         {
-            return "Đăng nhập thất bại.";
+            return registerContext ? "Đăng ký thất bại." : "Đăng nhập thất bại.";
         }
 
         string lowerError = error.ToLowerInvariant();
@@ -104,6 +153,16 @@ public class PanelLogin : MonoBehaviour
             return "Email chưa được xác nhận.";
         }
 
+        if (lowerError.Contains("user already registered") || lowerError.Contains("already registered"))
+        {
+            return "Email này đã được đăng ký.";
+        }
+
+        if (lowerError.Contains("password") && lowerError.Contains("6"))
+        {
+            return "Mật khẩu phải có ít nhất 6 ký tự.";
+        }
+
         if (lowerError.Contains("supabase config"))
         {
             return "Thiếu cấu hình Supabase.";
@@ -111,10 +170,12 @@ public class PanelLogin : MonoBehaviour
 
         if (lowerError.Contains("400"))
         {
-            return "Thông tin đăng nhập không hợp lệ.";
+            return registerContext ? "Thông tin đăng ký không hợp lệ." : "Thông tin đăng nhập không hợp lệ.";
         }
 
-        return "Đăng nhập thất bại. Xem Console để biết chi tiết.";
+        return registerContext
+            ? "Đăng ký thất bại. Xem Console để biết chi tiết."
+            : "Đăng nhập thất bại. Xem Console để biết chi tiết.";
     }
 
     private void UpdateDisplayName()
@@ -125,5 +186,69 @@ public class PanelLogin : MonoBehaviour
         }
 
         displayNameText.text = SupabaseSession.DisplayName;
+    }
+
+    private void ToggleMode()
+    {
+        isRegisterMode = !isRegisterMode;
+        SetStatus(string.Empty);
+        RefreshModeText();
+    }
+
+    private void RefreshModeText()
+    {
+        if (loginButtonText != null)
+        {
+            loginButtonText.text = isRegisterMode ? RegisterModeSubmitText : LoginModeSubmitText;
+        }
+
+        if (registerToggleText != null)
+        {
+            registerToggleText.text = isRegisterMode ? RegisterModeToggleText : LoginModeToggleText;
+        }
+    }
+
+    private void SetToggleInteractable(bool interactable)
+    {
+        if (registerToggleButton != null)
+        {
+            registerToggleButton.interactable = interactable;
+        }
+    }
+
+    private void ResolveButtonTextReferences()
+    {
+        if (loginButtonText == null && loginButton != null)
+        {
+            loginButtonText = loginButton.GetComponentInChildren<Text>();
+        }
+
+        if (registerToggleText == null)
+        {
+            TMP_Text[] texts = GetComponentsInChildren<TMP_Text>(true);
+            foreach (TMP_Text text in texts)
+            {
+                if (text != null && text.text.Trim().Equals(LoginModeToggleText, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    registerToggleText = text;
+                    break;
+                }
+            }
+        }
+    }
+
+    private void ResolveRegisterToggleButton()
+    {
+        if (registerToggleButton != null || registerToggleText == null)
+        {
+            return;
+        }
+
+        registerToggleButton = registerToggleText.GetComponent<Button>();
+        if (registerToggleButton == null)
+        {
+            registerToggleButton = registerToggleText.gameObject.AddComponent<Button>();
+            registerToggleButton.targetGraphic = registerToggleText;
+        }
     }
 }
