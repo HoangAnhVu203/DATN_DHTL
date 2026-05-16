@@ -75,6 +75,29 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    public IEnumerator GetActiveMatch(string roomId, Action<bool, MatchData, string> callback)
+    {
+        if (!EnsureReady(callback))
+        {
+            yield break;
+        }
+
+        string escapedRoomId = Uri.EscapeDataString(roomId);
+        string url = $"{config.SupabaseUrl}/rest/v1/matches?room_id=eq.{escapedRoomId}&status=in.(starting,active)&select=match_id:id,room_id,host_id,status,seed,started_at,created_at&order=created_at.desc&limit=1";
+
+        yield return GetRest(url, (success, response, error) =>
+        {
+            if (!success)
+            {
+                callback?.Invoke(false, null, error);
+                return;
+            }
+
+            MatchData[] matches = FromJsonArray<MatchData>(response);
+            callback?.Invoke(true, matches.Length > 0 ? matches[0] : null, null);
+        });
+    }
+
     public IEnumerator GetRoomPlayers(string roomId, Action<bool, List<RoomPlayerData>, string> callback)
     {
         if (!EnsureReady(callback))

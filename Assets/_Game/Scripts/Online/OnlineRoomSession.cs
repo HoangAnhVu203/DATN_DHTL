@@ -7,10 +7,15 @@ public static class OnlineRoomSession
     public static string HostId;
     public static string Status;
     public static int MaxPlayers;
+    public static string MatchId;
+    public static string MatchStatus;
+    public static int MatchSeed;
+    public static string MatchStartedAt;
     public static List<RoomService.RoomPlayerData> Players = new List<RoomService.RoomPlayerData>();
 
     public static bool IsInRoom => !string.IsNullOrEmpty(RoomId);
     public static bool IsHost => IsInRoom && HostId == SupabaseSession.UserId;
+    public static bool HasMatch => !string.IsNullOrEmpty(MatchId);
 
     public static void SetRoom(RoomService.RoomData room)
     {
@@ -21,6 +26,19 @@ public static class OnlineRoomSession
         MaxPlayers = room.max_players;
     }
 
+    public static void SetMatch(RoomService.MatchData match)
+    {
+        if (match == null)
+        {
+            return;
+        }
+
+        MatchId = match.match_id;
+        MatchStatus = match.status;
+        MatchSeed = match.seed;
+        MatchStartedAt = match.started_at;
+    }
+
     public static void Clear()
     {
         RoomId = null;
@@ -28,6 +46,10 @@ public static class OnlineRoomSession
         HostId = null;
         Status = null;
         MaxPlayers = 0;
+        MatchId = null;
+        MatchStatus = null;
+        MatchSeed = 0;
+        MatchStartedAt = null;
         Players.Clear();
     }
 }

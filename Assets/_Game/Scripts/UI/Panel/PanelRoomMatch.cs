@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PanelRoomMatch : UICanvas
@@ -15,12 +16,15 @@ public class PanelRoomMatch : UICanvas
     [SerializeField] private TMP_Text roomCodeText;
     [SerializeField] private Sprite defaultAvatarSprite;
     [SerializeField] private Sprite[] localAvatarSprites;
+    [SerializeField] private string gameSceneName = "GameScene";
 
     private readonly List<PlayerSlotView> playerSlots = new List<PlayerSlotView>();
     private RoomService roomService;
     private Coroutine refreshCoroutine;
     private bool localPlayerReady;
     private bool actionInProgress;
+    private bool matchCheckInProgress;
+    private bool isLoadingMatchScene;
 
     public void SetRoom(RoomService service, RoomService.RoomData room)
     {
@@ -163,6 +167,7 @@ public class PanelRoomMatch : UICanvas
         while (gameObject.activeInHierarchy && OnlineRoomSession.IsInRoom)
         {
             RefreshPlayers();
+            CheckForStartedMatch();
             yield return new WaitForSecondsRealtime(RefreshInterval);
         }
     }
@@ -221,6 +226,39 @@ public class PanelRoomMatch : UICanvas
         }
 
         RefreshActionButton();
+    }
+
+    private void CheckForStartedMatch()
+    {
+        if (matchCheckInProgress || isLoadingMatchScene || roomService == null || !OnlineRoomSession.IsInRoom)
+        {
+            return;
+        }
+
+        matchCheckInProgress = true;
+        StartCoroutine(roomService.GetActiveMatch(OnlineRoomSession.RoomId, OnActiveMatchLoaded));
+    }
+
+    private void OnActiveMatchLoaded(bool success, RoomService.MatchData data, string error)
+    {
+        matchCheckInProgress = false;
+
+        if (!success)
+        {
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                Debug.LogWarning(error);
+            }
+
+            return;
+        }
+
+        if (data == null || string.IsNullOrWhiteSpace(data.match_id))
+        {
+            return;
+        }
+
+        BeginLoadMatch(data);
     }
 
     private IEnumerator LoadAvatar(string avatarUrl, PlayerSlotView slot)
@@ -408,8 +446,28 @@ public class PanelRoomMatch : UICanvas
             return;
         }
 
+        if (data == null || string.IsNullOrWhiteSpace(data.match_id))
+        {
+            Debug.LogError("Start match succeeded but match data is empty.");
+            return;
+        }
+
         Debug.Log($"Match started: {data.match_id} - seed {data.seed}");
-        RefreshPlayers();
+        BeginLoadMatch(data);
+    }
+
+    private void BeginLoadMatch(RoomService.MatchData match)
+    {
+        if (isLoadingMatchScene)
+        {
+            return;
+        }
+
+        OnlineRoomSession.SetMatch(match);
+        isLoadingMatchScene = true;
+        StopRefreshing();
+        SetButtonsInteractable(false);
+        SceneManager.LoadScene(gameSceneName);
     }
 
     private void RefreshActionButton()
