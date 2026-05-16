@@ -11,19 +11,19 @@ public class UICanvas : Singleton<UICanvas>
     //xu ly canvas dien thoai tai tho
     private void Awake()
     {
-        RectTransform rect = GetComponent<RectTransform>();
-        float ratio = (float)Screen.width / Screen.height;
-        if (ratio > 2.1f)
-        {
-            Vector2 leftBottom = rect.offsetMin;
-            Vector2 rightTop = rect.offsetMax;
+        //RectTransform rect = GetComponent<RectTransform>();
+        //float ratio = (float)Screen.width / Screen.height;
+        //if (ratio > 2.1f)
+        //{
+        //    Vector2 leftBottom = rect.offsetMin;
+        //    Vector2 rightTop = rect.offsetMax;
 
-            leftBottom.y = 0f;
-            rightTop.y = -100f;
+        //    leftBottom.y = 0f;
+        //    rightTop.y = -100f;
 
-            rect.offsetMin = leftBottom;
-            rect.offsetMax = rightTop;
-        }
+        //    rect.offsetMin = leftBottom;
+        //    rect.offsetMax = rightTop;
+        //}
     }
     //goi truoc khi canvas active
     public virtual void SetUp()

@@ -1,0 +1,1029 @@
+fileFormatVersion: 2
+guid: f71b0c77d9a06bf4f810de5f5931bd89
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 0
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_0
+      rect:
+        serializedVersion: 2
+        x: 8
+        y: 334
+        width: 119
+        height: 46
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 33eed0014b233ae4292d4c2676d921fc
+      internalID: -1874318922
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_1
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 334
+        width: 114
+        height: 50
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 29c1255d533efee43a752e52cf4f76e4
+      internalID: 1345845196
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_2
+      rect:
+        serializedVersion: 2
+        x: 248
+        y: 330
+        width: 100
+        height: 54
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 705b689609f45c84cba56b3bf6017d39
+      internalID: -2088697160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_3
+      rect:
+        serializedVersion: 2
+        x: 349
+        y: 336
+        width: 90
+        height: 48
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1902e9f96d7d4c043842f230e7939f68
+      internalID: -103683998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_4
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 353
+        width: 152
+        height: 31
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ed584af586f485449d3a3e3517c048d
+      internalID: -1026154183
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_5
+      rect:
+        serializedVersion: 2
+        x: 6
+        y: 288
+        width: 122
+        height: 42
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6feb078ab3ac28d4b977952f9fe131d3
+      internalID: -599414997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_6
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 288
+        width: 110
+        height: 42
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d4e8440572e71a3469e17e165a4315e9
+      internalID: -464837307
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_7
+      rect:
+        serializedVersion: 2
+        x: 246
+        y: 288
+        width: 102
+        height: 38
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d003748c6cc0a964eb049c3f44371209
+      internalID: -276886083
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_8
+      rect:
+        serializedVersion: 2
+        x: 350
+        y: 288
+        width: 94
+        height: 42
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 64da70cb44393e54c9ad0160cf3e395e
+      internalID: 838488762
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_9
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 286
+        width: 164
+        height: 66
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bbcbcfbe2524cbb4caf40eb00cf0ebfd
+      internalID: -1342059295
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_10
+      rect:
+        serializedVersion: 2
+        x: 6
+        y: 228
+        width: 120
+        height: 54
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d893450dd3c502348a916c43997effb6
+      internalID: 1608077989
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_11
+      rect:
+        serializedVersion: 2
+        x: 126
+        y: 226
+        width: 109
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7bbc4c3be6ae884a9a47de132bcef36
+      internalID: -1209846992
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_12
+      rect:
+        serializedVersion: 2
+        x: 242
+        y: 232
+        width: 100
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6006533378def7a4fafde6d6d2e2682f
+      internalID: 1413767807
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_13
+      rect:
+        serializedVersion: 2
+        x: 348
+        y: 228
+        width: 93
+        height: 41
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 10e235bd1c408ed4eafdfc1825a62598
+      internalID: -270799464
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_14
+      rect:
+        serializedVersion: 2
+        x: 449
+        y: 255
+        width: 147
+        height: 27
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ba8491e4a794f4b4e90dbd5902f244aa
+      internalID: -1111005533
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_15
+      rect:
+        serializedVersion: 2
+        x: 7
+        y: 174
+        width: 110
+        height: 42
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 44b529f53d225904894c3f1faf8ffda9
+      internalID: 797802877
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_16
+      rect:
+        serializedVersion: 2
+        x: 124
+        y: 174
+        width: 104
+        height: 42
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 999c345af3c9f6a4ba9309924f0b4b1c
+      internalID: -479834191
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_17
+      rect:
+        serializedVersion: 2
+        x: 234
+        y: 177
+        width: 108
+        height: 45
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91f20eab95e10b94680ecd24f83b65b5
+      internalID: 1369916397
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_18
+      rect:
+        serializedVersion: 2
+        x: 449
+        y: 178
+        width: 151
+        height: 71
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d27e355417632d645b34506f76288d35
+      internalID: 148710894
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_19
+      rect:
+        serializedVersion: 2
+        x: 6
+        y: 120
+        width: 108
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a251d4a057d41ab4d8d050db14cbd671
+      internalID: 1673272943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_20
+      rect:
+        serializedVersion: 2
+        x: 123
+        y: 118
+        width: 105
+        height: 50
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 039b1272d51963a4bb4d1d235fad5333
+      internalID: 1860352319
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_21
+      rect:
+        serializedVersion: 2
+        x: 236
+        y: 114
+        width: 102
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6ed89cd10f8d006458c2422a55a664e0
+      internalID: 111196082
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_22
+      rect:
+        serializedVersion: 2
+        x: 346
+        y: 118
+        width: 94
+        height: 44
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7858b12cad973ec40bf8ff80a82ce230
+      internalID: 2141798291
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_23
+      rect:
+        serializedVersion: 2
+        x: 449
+        y: 145
+        width: 147
+        height: 25
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f89a2c647c6d1bd41bc9ea61641a7eb6
+      internalID: 762903815
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_24
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 73
+        width: 108
+        height: 41
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 93b3359ed0233b94ea91213b6728ca1a
+      internalID: 1019445720
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_25
+      rect:
+        serializedVersion: 2
+        x: 342
+        y: 77
+        width: 97
+        height: 37
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ac4d98afdff98f743ad203e3f03b9cd4
+      internalID: -687173281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_26
+      rect:
+        serializedVersion: 2
+        x: 449
+        y: 114
+        width: 147
+        height: 26
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1cdad3ce716bbb34fbc4d9f124af4e5f
+      internalID: 853155979
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_27
+      rect:
+        serializedVersion: 2
+        x: 6
+        y: 66
+        width: 102
+        height: 45
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9c09fb0616af46e4aaa98d996ec55746
+      internalID: 917894512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_28
+      rect:
+        serializedVersion: 2
+        x: 232
+        y: 76
+        width: 104
+        height: 35
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 250d2780be7e7724bbcd858ea143f5e1
+      internalID: 1836799076
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_29
+      rect:
+        serializedVersion: 2
+        x: 449
+        y: 84
+        width: 151
+        height: 26
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7733cd87e4e9c894a96b373d6860e584
+      internalID: 1278363481
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_30
+      rect:
+        serializedVersion: 2
+        x: 90
+        y: 54
+        width: 264
+        height: 18
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3c6b3076fbd94704682789fcbfbf1ab6
+      internalID: -517696611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_31
+      rect:
+        serializedVersion: 2
+        x: 444
+        y: 48
+        width: 79
+        height: 30
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8753db312246eaa40bb088a3664a079c
+      internalID: -1493191364
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_32
+      rect:
+        serializedVersion: 2
+        x: 524
+        y: 51
+        width: 72
+        height: 27
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b53947471850f4343945ac9c0b22403c
+      internalID: 177760161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_33
+      rect:
+        serializedVersion: 2
+        x: 6
+        y: 12
+        width: 106
+        height: 37
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b31a7363539794448aca51ae55282e86
+      internalID: 774490423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_34
+      rect:
+        serializedVersion: 2
+        x: 122
+        y: 12
+        width: 101
+        height: 36
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e43022a674914143b44b0839f71b39b
+      internalID: 1995599464
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_35
+      rect:
+        serializedVersion: 2
+        x: 232
+        y: 12
+        width: 98
+        height: 40
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8c20f03e8394a0d44849b362518cee06
+      internalID: 528187217
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_36
+      rect:
+        serializedVersion: 2
+        x: 336
+        y: 13
+        width: 99
+        height: 35
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 477cf977170699b438da3b60658c14cb
+      internalID: -1769997764
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_37
+      rect:
+        serializedVersion: 2
+        x: 443
+        y: 12
+        width: 153
+        height: 35
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94b6093687923d34e9f55206cb6c9257
+      internalID: 1202491575
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: UIbutton-Txt (2)_38
+      rect:
+        serializedVersion: 2
+        x: 481
+        y: 0
+        width: 5
+        height: 12
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8516afbaf05019c4980efdb40d7cd967
+      internalID: -1956139830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 351b32a6e00d4544bb6e84ed94160c50
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries:
+      - key: SpriteEditor.SliceSettings
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":64.0,"y":64.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":0,"keepEmptyRects":false,"isAlternate":false}'
+    nameFileIdTable:
+      UIbutton-Txt (2)_0: -1874318922
+      UIbutton-Txt (2)_1: 1345845196
+      UIbutton-Txt (2)_10: 1608077989
+      UIbutton-Txt (2)_11: -1209846992
+      UIbutton-Txt (2)_12: 1413767807
+      UIbutton-Txt (2)_13: -270799464
+      UIbutton-Txt (2)_14: -1111005533
+      UIbutton-Txt (2)_15: 797802877
+      UIbutton-Txt (2)_16: -479834191
+      UIbutton-Txt (2)_17: 1369916397
+      UIbutton-Txt (2)_18: 148710894
+      UIbutton-Txt (2)_19: 1673272943
+      UIbutton-Txt (2)_2: -2088697160
+      UIbutton-Txt (2)_20: 1860352319
+      UIbutton-Txt (2)_21: 111196082
+      UIbutton-Txt (2)_22: 2141798291
+      UIbutton-Txt (2)_23: 762903815
+      UIbutton-Txt (2)_24: 1019445720
+      UIbutton-Txt (2)_25: -687173281
+      UIbutton-Txt (2)_26: 853155979
+      UIbutton-Txt (2)_27: 917894512
+      UIbutton-Txt (2)_28: 1836799076
+      UIbutton-Txt (2)_29: 1278363481
+      UIbutton-Txt (2)_3: -103683998
+      UIbutton-Txt (2)_30: -517696611
+      UIbutton-Txt (2)_31: -1493191364
+      UIbutton-Txt (2)_32: 177760161
+      UIbutton-Txt (2)_33: 774490423
+      UIbutton-Txt (2)_34: 1995599464
+      UIbutton-Txt (2)_35: 528187217
+      UIbutton-Txt (2)_36: -1769997764
+      UIbutton-Txt (2)_37: 1202491575
+      UIbutton-Txt (2)_38: -1956139830
+      UIbutton-Txt (2)_4: -1026154183
+      UIbutton-Txt (2)_5: -599414997
+      UIbutton-Txt (2)_6: -464837307
+      UIbutton-Txt (2)_7: -276886083
+      UIbutton-Txt (2)_8: 838488762
+      UIbutton-Txt (2)_9: -1342059295
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

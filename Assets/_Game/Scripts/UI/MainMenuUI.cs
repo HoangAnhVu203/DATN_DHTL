@@ -1,14 +1,41 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class MainMenuUI : MonoBehaviour
 {
     [SerializeField] private string gameSceneName = "GameScene";
     [SerializeField] private float minimumLoadingTime = 0.5f;
     [SerializeField] private PanelLoading loadingPanelPrefab;
+    [SerializeField] private Button informationPlayerButton;
 
     private bool isLoading;
+
+    private void Awake()
+    {
+        if (informationPlayerButton == null)
+        {
+            GameObject informationButtonObject = GameObject.Find("InformationPlayer");
+            if (informationButtonObject != null)
+            {
+                informationPlayerButton = informationButtonObject.GetComponent<Button>();
+            }
+        }
+
+        if (informationPlayerButton != null)
+        {
+            informationPlayerButton.onClick.AddListener(OpenInformationPanel);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (informationPlayerButton != null)
+        {
+            informationPlayerButton.onClick.RemoveListener(OpenInformationPanel);
+        }
+    }
 
     public void StartGame()
     {
@@ -22,6 +49,17 @@ public class MainMenuUI : MonoBehaviour
         SceneLoadingRunner loadingRunner = new GameObject("Scene Loading Runner").AddComponent<SceneLoadingRunner>();
         DontDestroyOnLoad(loadingRunner.gameObject);
         loadingRunner.LoadScene(gameSceneName, minimumLoadingTime, loadingPanelPrefab);
+    }
+
+    private void OpenInformationPanel()
+    {
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            Debug.LogWarning("Login before opening player information.");
+            return;
+        }
+
+        PanelInformation.OpenFromScene();
     }
 }
 

@@ -101,6 +101,7 @@ public class PanelLogin : MonoBehaviour
 
         SetStatus("Đăng nhập thành công.");
         UpdateDisplayName();
+        PanelInformation.RefreshInformationPlayerAvatar();
 
         if (panelToHideOnSuccess != null)
         {

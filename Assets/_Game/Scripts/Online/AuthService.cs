@@ -8,6 +8,8 @@ public class AuthService : MonoBehaviour
 {
     [SerializeField] private SupabaseConfig config;
 
+    public SupabaseConfig Config => config;
+
     public IEnumerator SignUp(string email, string password, Action<bool, string> callback)
     {
         if (!HasValidConfig(callback))
@@ -112,18 +114,26 @@ public class AuthService : MonoBehaviour
         SupabaseSession.Email = response.user.email;
         SupabaseSession.DisplayName = response.user.GetDisplayName();
 
-        yield return LoadUserProfileDisplayName(SupabaseSession.UserId, displayName =>
+        yield return LoadUserProfile(SupabaseSession.UserId, profile =>
         {
-            if (!string.IsNullOrWhiteSpace(displayName))
+            if (profile == null)
             {
-                SupabaseSession.DisplayName = displayName;
+                return;
+            }
+
+            SupabaseSession.Username = profile.username;
+            SupabaseSession.AvatarUrl = profile.avatar_url;
+
+            if (!string.IsNullOrWhiteSpace(profile.GetDisplayName()))
+            {
+                SupabaseSession.DisplayName = profile.GetDisplayName();
             }
         });
 
         callback?.Invoke(true, SupabaseSession.DisplayName);
     }
 
-    private IEnumerator LoadUserProfileDisplayName(string userId, Action<string> callback)
+    private IEnumerator LoadUserProfile(string userId, Action<UserProfile> callback)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -132,7 +142,7 @@ public class AuthService : MonoBehaviour
         }
 
         string escapedUserId = Uri.EscapeDataString(userId);
-        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{escapedUserId}&select=display_name,username";
+        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{escapedUserId}&select=id,display_name,username,avatar_url";
 
         using UnityWebRequest request = UnityWebRequest.Get(url);
         request.SetRequestHeader("apikey", config.AnonKey);
@@ -157,7 +167,7 @@ public class AuthService : MonoBehaviour
             yield break;
         }
 
-        callback?.Invoke(profiles[0].GetDisplayName());
+        callback?.Invoke(profiles[0]);
     }
 
     private bool HasValidConfig(Action<bool, string> callback)
@@ -269,8 +279,10 @@ public class AuthService : MonoBehaviour
     [Serializable]
     private class UserProfile
     {
+        public string id;
         public string display_name;
         public string username;
+        public string avatar_url;
 
         public string GetDisplayName()
         {
