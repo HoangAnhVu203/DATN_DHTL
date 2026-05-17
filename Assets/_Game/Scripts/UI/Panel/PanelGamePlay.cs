@@ -17,6 +17,7 @@ public class PanelGamePlay : UICanvas
     [SerializeField] private TMP_Text coinText;
 
     private Player player;
+    private FusionPlayerAvatar fusionPlayerAvatar;
     private Health playerHealth;
     private Player subscribedPlayer;
     private Health subscribedPlayerHealth;
@@ -84,7 +85,11 @@ public class PanelGamePlay : UICanvas
             CachePlayer();
         }
 
-        if (player != null)
+        if (fusionPlayerAvatar != null)
+        {
+            fusionPlayerAvatar.RequestAttack();
+        }
+        else if (player != null)
         {
             player.Attack();
         }
@@ -97,7 +102,11 @@ public class PanelGamePlay : UICanvas
             CachePlayer();
         }
 
-        if (player != null)
+        if (fusionPlayerAvatar != null)
+        {
+            fusionPlayerAvatar.RequestSlide();
+        }
+        else if (player != null)
         {
             player.Slide();
         }
@@ -165,6 +174,13 @@ public class PanelGamePlay : UICanvas
 
         if (playerObject != null)
         {
+            fusionPlayerAvatar = playerObject.GetComponent<FusionPlayerAvatar>();
+
+            if (fusionPlayerAvatar == null)
+            {
+                fusionPlayerAvatar = playerObject.GetComponentInParent<FusionPlayerAvatar>();
+            }
+
             player = playerObject.GetComponent<Player>();
 
             if (player == null)
@@ -178,7 +194,19 @@ public class PanelGamePlay : UICanvas
             player = FindFirstObjectByType<Player>();
         }
 
-        playerHealth = player != null ? player.GetComponent<Health>() : null;
+        if (fusionPlayerAvatar == null)
+        {
+            fusionPlayerAvatar = FindFirstObjectByType<FusionPlayerAvatar>();
+        }
+
+        if (fusionPlayerAvatar != null)
+        {
+            playerHealth = fusionPlayerAvatar.GetComponent<Health>();
+        }
+        else
+        {
+            playerHealth = player != null ? player.GetComponent<Health>() : null;
+        }
     }
 
     private void SubscribePlayerStats()

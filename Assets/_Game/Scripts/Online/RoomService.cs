@@ -62,6 +62,33 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    public IEnumerator SendRoomHeartbeat(string roomId, Action<bool, string> callback)
+    {
+        string jsonBody = JsonUtility.ToJson(new RoomIdRequest
+        {
+            room_id = roomId
+        });
+
+        yield return InvokeFunction<BasicResponse>("room_heartbeat", jsonBody, (success, response, error) =>
+        {
+            callback?.Invoke(success && response != null && response.success, error ?? response?.error?.message);
+        });
+    }
+
+    public IEnumerator CleanupInactiveRoomPlayers(string roomId, int timeoutSeconds, Action<bool, string> callback)
+    {
+        string jsonBody = JsonUtility.ToJson(new CleanupInactiveRequest
+        {
+            room_id = roomId,
+            timeout_seconds = timeoutSeconds
+        });
+
+        yield return InvokeFunction<BasicResponse>("cleanup_inactive_room_players", jsonBody, (success, response, error) =>
+        {
+            callback?.Invoke(success && response != null && response.success, error ?? response?.error?.message);
+        });
+    }
+
     public IEnumerator StartMatch(string roomId, Action<bool, MatchData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new RoomIdRequest
@@ -196,6 +223,7 @@ public class RoomService : MonoBehaviour
 
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
+        request.timeout = 10;
 
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader("apikey", config.AnonKey);
@@ -211,6 +239,11 @@ public class RoomService : MonoBehaviour
             yield break;
         }
 
+        if (functionName == "room_heartbeat")
+        {
+            Debug.Log($"room_heartbeat response: {responseText}");
+        }
+
         T response = JsonUtility.FromJson<T>(responseText);
         callback?.Invoke(true, response, null);
     }
@@ -218,6 +251,7 @@ public class RoomService : MonoBehaviour
     private IEnumerator GetRest(string url, Action<bool, string, string> callback)
     {
         using UnityWebRequest request = UnityWebRequest.Get(url);
+        request.timeout = 10;
         request.SetRequestHeader("apikey", config.AnonKey);
         request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
         request.SetRequestHeader("Accept", "application/json");
@@ -335,6 +369,13 @@ public class RoomService : MonoBehaviour
     private class RoomIdRequest
     {
         public string room_id;
+    }
+
+    [Serializable]
+    private class CleanupInactiveRequest
+    {
+        public string room_id;
+        public int timeout_seconds;
     }
 
     [Serializable]

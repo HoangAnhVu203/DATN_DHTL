@@ -130,7 +130,37 @@ public class AuthService : MonoBehaviour
             }
         });
 
+        yield return CleanupPlayerStateAfterLogin();
+        OnlineRoomSession.Clear();
+        OnlineSessionCleanup.Ensure(config);
+
         callback?.Invoke(true, SupabaseSession.DisplayName);
+    }
+
+    private IEnumerator CleanupPlayerStateAfterLogin()
+    {
+        string url = $"{config.FunctionUrl}/cleanup_player_state";
+
+        using UnityWebRequest request = new UnityWebRequest(url, "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes("{}");
+
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+        if (request.responseCode < 200 || request.responseCode >= 300 || request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogWarning($"Cleanup after login failed: {BuildErrorMessage(request.responseCode, request.error, responseText)}");
+            yield break;
+        }
+
+        Debug.Log($"Cleanup after login completed: {responseText}");
     }
 
     private IEnumerator LoadUserProfile(string userId, Action<UserProfile> callback)

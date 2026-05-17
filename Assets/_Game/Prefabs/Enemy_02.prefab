@@ -81,6 +81,10 @@ GameObject:
   - component: {fileID: 8393640631042891432}
   - component: {fileID: 7983869302279982120}
   - component: {fileID: 7710128703051468637}
+  - component: {fileID: 2624453269167677049}
+  - component: {fileID: 7953996792240473359}
+  - component: {fileID: 1660210583519125912}
+  - component: {fileID: 3000774851291644789}
   m_Layer: 0
   m_Name: Enemy_02
   m_TagString: Enemy
@@ -257,6 +261,81 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enemy_02_shoot
   ShootingPoint: {fileID: 856343995071591597}
   DamageOrb: {fileID: 285300937764963028, guid: 6c6e74124c3de4147a47b4c61823f51b, type: 3}
+--- !u!114 &2624453269167677049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7708497795694214167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2359762007
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 7953996792240473359}
+  - {fileID: 1660210583519125912}
+  - {fileID: 3000774851291644789}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &7953996792240473359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7708497795694214167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1660210583519125912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7708497795694214167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 506319458, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkMecanimAnimator
+  Animator: {fileID: 4790460547884020384}
+  ApplyTiming: 2
+  SyncSettings: 79
+  StateHashes: 000000002b1a167c7940695520e23b685928a8ce3270625b602a1d721ae6174d48bc68640c98c2e51609f80f66c12eb3e48e62363f7ec8120b14db4e852fc18bb145d2d7131fc6fc2775d5a0
+  TriggerHashes: 000000000d286c401ae6174d0c98c2e566c12eb3
+  TotalWords: 2
+--- !u!114 &3000774851291644789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7708497795694214167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8680a8c5cc7d67e4bb27c5b4cc2bf912, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FusionEnemyAvatar
+  enemy: {fileID: 8260926505028731332}
+  characterController: {fileID: 2515386618694314577}
+  navMeshAgent: {fileID: 7203525119186817603}
+  damageCaster: {fileID: 0}
+  rangedAttack: {fileID: 7710128703051468637}
+  targetRefreshInterval: 0.25
+  playSpawnDissolveOnAuthority: 1
 --- !u!1001 &1293935998826624250
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -83,6 +83,10 @@ GameObject:
   - component: {fileID: 3570025386580412690}
   - component: {fileID: 1650976010910818354}
   - component: {fileID: 3197131157360376153}
+  - component: {fileID: 7546945476792761178}
+  - component: {fileID: 4025627234326503564}
+  - component: {fileID: 8369253693330193892}
+  - component: {fileID: 7492737907799385399}
   m_Layer: 0
   m_Name: Enemy_01
   m_TagString: Enemy
@@ -245,6 +249,80 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 100
   currentHealth: 0
+--- !u!114 &7546945476792761178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7548010489559646399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1555809208
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 4025627234326503564}
+  - {fileID: 8369253693330193892}
+  - {fileID: 7492737907799385399}
+  ForceRemoteRenderTimeframe: 0
+--- !u!114 &4025627234326503564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7548010489559646399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &8369253693330193892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7548010489559646399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 506319458, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkMecanimAnimator
+  Animator: {fileID: 5051682443345132526}
+  ApplyTiming: 2
+  SyncSettings: 79
+  StateHashes: 000000002b1a167c7940695520e23b685928a8ce3270625b602a1d721ae6174d48bc68640c98c2e51609f80f66c12eb3e48e62363f7ec8120b14db4e852fc18bb145d2d7131fc6fc2775d5a0
+  TriggerHashes: 000000000d286c401ae6174d0c98c2e566c12eb3
+  TotalWords: 2
+--- !u!114 &7492737907799385399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7548010489559646399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8680a8c5cc7d67e4bb27c5b4cc2bf912, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FusionEnemyAvatar
+  enemy: {fileID: 3570025386580412690}
+  characterController: {fileID: 3018361810035516467}
+  navMeshAgent: {fileID: 2103940234530675900}
+  damageCaster: {fileID: 6053042145779881754}
+  targetRefreshInterval: 0.25
+  playSpawnDissolveOnAuthority: 1
 --- !u!1 &7728130344068037604
 GameObject:
   m_ObjectHideFlags: 0

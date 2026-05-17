@@ -25,6 +25,7 @@ public class PanelRoomMatch : UICanvas
     private bool actionInProgress;
     private bool matchCheckInProgress;
     private bool isLoadingMatchScene;
+    private bool roomRefreshInProgress;
 
     public void SetRoom(RoomService service, RoomService.RoomData room)
     {
@@ -166,10 +167,36 @@ public class PanelRoomMatch : UICanvas
     {
         while (gameObject.activeInHierarchy && OnlineRoomSession.IsInRoom)
         {
-            RefreshPlayers();
+            RefreshRoomState();
             CheckForStartedMatch();
             yield return new WaitForSecondsRealtime(RefreshInterval);
         }
+    }
+
+    private void RefreshRoomState()
+    {
+        if (roomRefreshInProgress || roomService == null || !OnlineRoomSession.IsInRoom)
+        {
+            return;
+        }
+
+        StartCoroutine(RefreshRoomStateRoutine());
+    }
+
+    private IEnumerator RefreshRoomStateRoutine()
+    {
+        roomRefreshInProgress = true;
+
+        yield return roomService.SendRoomHeartbeat(OnlineRoomSession.RoomId, (success, error) =>
+        {
+            if (!success && !string.IsNullOrWhiteSpace(error))
+            {
+                Debug.LogWarning(error);
+            }
+        });
+
+        RefreshPlayers();
+        roomRefreshInProgress = false;
     }
 
     private void RefreshPlayers()
@@ -192,6 +219,8 @@ public class PanelRoomMatch : UICanvas
 
         OnlineRoomSession.Players = players ?? new List<RoomService.RoomPlayerData>();
         localPlayerReady = false;
+        bool localPlayerStillInRoom = false;
+        SyncHostFromPlayers(OnlineRoomSession.Players);
 
         for (int i = 0; i < playerSlots.Count; i++)
         {
@@ -203,6 +232,7 @@ public class PanelRoomMatch : UICanvas
                 if (player.user_id == SupabaseSession.UserId)
                 {
                     localPlayerReady = player.is_ready;
+                    localPlayerStillInRoom = true;
                 }
 
                 if (IsLocalAvatarKey(player.avatar_url))
@@ -225,7 +255,31 @@ public class PanelRoomMatch : UICanvas
             }
         }
 
+        if (OnlineRoomSession.Players.Count > 0 && !localPlayerStillInRoom)
+        {
+            OnlineRoomSession.Clear();
+            CloseDirectly();
+            return;
+        }
+
         RefreshActionButton();
+    }
+
+    private void SyncHostFromPlayers(List<RoomService.RoomPlayerData> players)
+    {
+        if (players == null)
+        {
+            return;
+        }
+
+        foreach (RoomService.RoomPlayerData player in players)
+        {
+            if (player != null && player.is_host)
+            {
+                OnlineRoomSession.HostId = player.user_id;
+                return;
+            }
+        }
     }
 
     private void CheckForStartedMatch()

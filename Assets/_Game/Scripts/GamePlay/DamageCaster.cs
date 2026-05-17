@@ -7,6 +7,7 @@ public class DamageCaster : MonoBehaviour
     private Collider damageCasterCollider;
     private PlayerVFXManager ownerVFXManager;
     private Character ownerCharacter;
+    private FusionPlayerAvatar ownerNetworkAvatar;
     private Transform ownerRoot;
 
     public int damage = 30;
@@ -20,6 +21,7 @@ public class DamageCaster : MonoBehaviour
         damageCasterCollider.enabled = false;
         ownerVFXManager = GetComponentInParent<PlayerVFXManager>();
         ownerCharacter = GetComponentInParent<Character>();
+        ownerNetworkAvatar = GetComponentInParent<FusionPlayerAvatar>();
         ownerRoot = ownerCharacter != null ? ownerCharacter.transform : null;
         damageTargetList = new List<Character>();
     }
@@ -36,6 +38,11 @@ public class DamageCaster : MonoBehaviour
 
     private void TryApplyDamage(Collider other)
     {
+        if (ownerNetworkAvatar != null && !ownerNetworkAvatar.CanApplyDamageLocally)
+        {
+            return;
+        }
+
         DamageOrb damageOrb = other.GetComponentInParent<DamageOrb>();
         if (damageOrb != null && ownerCharacter is Player)
         {
@@ -45,14 +52,34 @@ public class DamageCaster : MonoBehaviour
         }
 
         Character targetCharacter = other.GetComponentInParent<Character>();
-        if (targetCharacter == null
-            || !targetCharacter.CompareTag(targetTag)
-            || damageTargetList.Contains(targetCharacter))
+        if (targetCharacter != null && damageTargetList.Contains(targetCharacter))
         {
             return;
         }
 
         Vector3 attackerPosition = ownerRoot != null ? ownerRoot.position : transform.position;
+        FusionEnemyAvatar targetNetworkEnemy = other.GetComponentInParent<FusionEnemyAvatar>();
+        if (targetNetworkEnemy != null)
+        {
+            if (targetNetworkEnemy.RequestDamage(damage, attackerPosition))
+            {
+                PlayHitVFX(other);
+
+                if (targetCharacter != null)
+                {
+                    damageTargetList.Add(targetCharacter);
+                }
+            }
+
+            return;
+        }
+
+        if (targetCharacter == null
+            || !targetCharacter.CompareTag(targetTag))
+        {
+            return;
+        }
+
         targetCharacter.ApplyDamage(damage, attackerPosition);
         PlayHitVFX(other);
         damageTargetList.Add(targetCharacter);
