@@ -80,6 +80,7 @@ GameObject:
   - component: {fileID: 8260926505028731332}
   - component: {fileID: 8393640631042891432}
   - component: {fileID: 7983869302279982120}
+  - component: {fileID: -6123456789012345676}
   - component: {fileID: 7710128703051468637}
   - component: {fileID: 2624453269167677049}
   - component: {fileID: 7953996792240473359}
@@ -247,6 +248,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 100
   currentHealth: 0
+--- !u!114 &-6123456789012345676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7708497795694214167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1db5b0f580e441f4e98bddeba16e4605, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FusionNetworkHealth
+  health: {fileID: 7983869302279982120}
+  _CurrentHealth: 0
+  _MaxHealth: 0
 --- !u!114 &7710128703051468637
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,6 +294,7 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
+  - {fileID: -6123456789012345676}
   - {fileID: 7953996792240473359}
   - {fileID: 1660210583519125912}
   - {fileID: 3000774851291644789}
@@ -334,6 +351,7 @@ MonoBehaviour:
   navMeshAgent: {fileID: 7203525119186817603}
   damageCaster: {fileID: 0}
   rangedAttack: {fileID: 7710128703051468637}
+  networkHealth: {fileID: -6123456789012345676}
   targetRefreshInterval: 0.25
   playSpawnDissolveOnAuthority: 1
 --- !u!1001 &1293935998826624250

@@ -17,11 +17,15 @@ public class FusionPlayerAvatar : NetworkBehaviour
     [SerializeField] private CharacterController characterController;
     [SerializeField] private Animator animator;
     [SerializeField] private DamageCaster damageCaster;
+    [SerializeField] private FusionNetworkHealth networkHealth;
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float rotationSpeed = 12f;
     [SerializeField] private float gravity = -20f;
     [SerializeField] private float groundedGravity = -2f;
-    [SerializeField] private float animatorDampTime = 0.12f;
+    [SerializeField] private float moveAcceleration = 14f;
+    [SerializeField] private float moveDeceleration = 100f;
+    [SerializeField] private float animatorDampTime = 0.06f;
+    [SerializeField] private float stopAnimatorDampTime = 0.01f;
     [SerializeField] private float attackDuration = 0.65f;
     [SerializeField] private float attackDamageDelay = 0.15f;
     [SerializeField] private float attackDamageDuration = 0.25f;
@@ -40,10 +44,25 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private float attackDamageTimer;
     private float slideTimer;
     private Vector3 slideDirection;
+    private Vector3 smoothedMoveDirection;
+    private Vector3 initialSpawnPosition;
+    private Quaternion initialSpawnRotation;
+    private int initialSpawnIndex = -1;
+    private int initialSpawnCorrectionTicks;
     private bool attackQueued;
     private bool slideQueued;
 
     public bool CanApplyDamageLocally => HasLocalControl();
+    public bool IsLocalPlayerAvatar => HasLocalControl();
+
+    public void SetInitialSpawn(Vector3 position, Quaternion rotation, int spawnIndex)
+    {
+        initialSpawnPosition = position;
+        initialSpawnRotation = rotation;
+        initialSpawnIndex = spawnIndex;
+        initialSpawnCorrectionTicks = 5;
+        ApplyInitialSpawnPosition();
+    }
 
     private void Awake()
     {
@@ -153,6 +172,11 @@ public class FusionPlayerAvatar : NetworkBehaviour
         {
             damageCaster = GetComponentInChildren<DamageCaster>(true);
         }
+
+        if (networkHealth == null)
+        {
+            networkHealth = GetComponent<FusionNetworkHealth>();
+        }
     }
 
     private void BindCinemachineCamera()
@@ -189,6 +213,17 @@ public class FusionPlayerAvatar : NetworkBehaviour
             return;
         }
 
+        if (initialSpawnCorrectionTicks > 0)
+        {
+            initialSpawnCorrectionTicks--;
+            ApplyInitialSpawnPosition();
+
+            if (initialSpawnCorrectionTicks > 0)
+            {
+                return;
+            }
+        }
+
         ConsumeQueuedActions();
         UpdateAttackDamageWindow(Runner.DeltaTime);
         MoveLocalPlayer(Runner.DeltaTime);
@@ -201,7 +236,8 @@ public class FusionPlayerAvatar : NetworkBehaviour
             return;
         }
 
-        animator.SetFloat(SpeedParameter, NetworkedSpeed, animatorDampTime, Time.deltaTime);
+        float dampTime = NetworkedSpeed > MoveInputThreshold ? animatorDampTime : stopAnimatorDampTime;
+        animator.SetFloat(SpeedParameter, NetworkedSpeed, dampTime, Time.deltaTime);
         animator.SetBool(IsGroundedParameter, NetworkedGrounded);
     }
 
@@ -243,12 +279,6 @@ public class FusionPlayerAvatar : NetworkBehaviour
             return;
         }
 
-        Vector3 inputDirection = slideTimer > 0f ? slideDirection : GetMoveInput();
-        inputDirection.y = 0f;
-        inputDirection = Vector3.ClampMagnitude(inputDirection, 1f);
-
-        bool hasMoveInput = inputDirection.sqrMagnitude > MoveInputThreshold;
-
         if (characterController.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = groundedGravity;
@@ -256,11 +286,14 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         verticalVelocity += gravity * deltaTime;
 
+        Vector3 targetMoveDirection = slideTimer > 0f ? slideDirection : GetMoveInput();
+        targetMoveDirection.y = 0f;
+        targetMoveDirection = Vector3.ClampMagnitude(targetMoveDirection, 1f);
+
         float currentMoveSpeed = moveSpeed;
         if (attackTimer > 0f)
         {
-            inputDirection = Vector3.zero;
-            hasMoveInput = false;
+            targetMoveDirection = Vector3.zero;
         }
         else if (slideTimer > 0f)
         {
@@ -269,28 +302,75 @@ public class FusionPlayerAvatar : NetworkBehaviour
             slideTimer = Mathf.Max(slideTimer - deltaTime, 0f);
         }
 
-        Vector3 movement = inputDirection * currentMoveSpeed;
+        float acceleration = targetMoveDirection.sqrMagnitude > MoveInputThreshold
+            ? moveAcceleration
+            : moveDeceleration;
+
+        if (slideTimer > 0f)
+        {
+            smoothedMoveDirection = targetMoveDirection;
+        }
+        else if (targetMoveDirection.sqrMagnitude <= MoveInputThreshold)
+        {
+            smoothedMoveDirection = Vector3.zero;
+        }
+        else
+        {
+            smoothedMoveDirection = Vector3.MoveTowards(
+                smoothedMoveDirection,
+                targetMoveDirection,
+                acceleration * deltaTime
+            );
+        }
+
+        bool hasMoveInput = smoothedMoveDirection.sqrMagnitude > MoveInputThreshold;
+        Vector3 movement = smoothedMoveDirection * currentMoveSpeed;
         movement.y = verticalVelocity;
         characterController.Move(movement * deltaTime);
 
         if (hasMoveInput)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
+            Quaternion targetRotation = Quaternion.LookRotation(smoothedMoveDirection.normalized);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
         }
 
+        float speed = hasMoveInput ? Mathf.Clamp01(smoothedMoveDirection.magnitude) : 0f;
+        NetworkedSpeed = speed;
+        NetworkedGrounded = characterController.isGrounded;
+
         if (animator != null)
         {
-            float speed = hasMoveInput ? inputDirection.magnitude : 0f;
-            animator.SetFloat(SpeedParameter, speed, animatorDampTime, deltaTime);
+            float dampTime = speed > MoveInputThreshold ? animatorDampTime : stopAnimatorDampTime;
+            animator.SetFloat(SpeedParameter, speed, dampTime, deltaTime);
             animator.SetBool(IsGroundedParameter, characterController.isGrounded);
-            NetworkedSpeed = speed;
-            NetworkedGrounded = characterController.isGrounded;
         }
 
         if (attackTimer > 0f)
         {
             attackTimer = Mathf.Max(attackTimer - deltaTime, 0f);
+        }
+    }
+
+    private void ApplyInitialSpawnPosition()
+    {
+        if (initialSpawnIndex < 0 || !HasLocalControl())
+        {
+            return;
+        }
+
+        bool controllerWasEnabled = characterController != null && characterController.enabled;
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
+
+        transform.SetPositionAndRotation(initialSpawnPosition, initialSpawnRotation);
+        verticalVelocity = 0f;
+        smoothedMoveDirection = Vector3.zero;
+
+        if (characterController != null)
+        {
+            characterController.enabled = controllerWasEnabled;
         }
     }
 
@@ -491,6 +571,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (player != null)
         {
             player.ApplyDamage(damage, attackPosition);
+            networkHealth?.ForceSyncNow();
             return;
         }
 
@@ -498,6 +579,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (character != null)
         {
             character.ApplyDamage(damage, attackPosition);
+            networkHealth?.ForceSyncNow();
         }
     }
 }

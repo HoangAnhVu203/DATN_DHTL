@@ -119,6 +119,7 @@ GameObject:
   - component: {fileID: 8581280618095101652}
   - component: {fileID: 5416066469235555611}
   - component: {fileID: 6578949617232299018}
+  - component: {fileID: -6123456789012345678}
   - component: {fileID: 8368680047227335955}
   - component: {fileID: -1577039580866764515}
   - component: {fileID: 4595923912481620653}
@@ -263,6 +264,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 100
   currentHealth: 0
+--- !u!114 &-6123456789012345678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7718866950905712737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1db5b0f580e441f4e98bddeba16e4605, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FusionNetworkHealth
+  health: {fileID: 6578949617232299018}
+  _CurrentHealth: 0
+  _MaxHealth: 0
 --- !u!114 &8368680047227335955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -295,6 +311,7 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
+  - {fileID: -6123456789012345678}
   - {fileID: 4595923912481620653}
   - {fileID: -508194257902332520}
   - {fileID: -4265879038994428902}
@@ -348,6 +365,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FusionPlayerAvatar
   player: {fileID: 5836399115853063092}
   characterController: {fileID: 8581280618095101652}
+  animator: {fileID: 6424311490524860203}
+  damageCaster: {fileID: 1431666348503151217}
+  networkHealth: {fileID: -6123456789012345678}
+  moveSpeed: 5
+  rotationSpeed: 12
+  gravity: -20
+  groundedGravity: -2
+  moveAcceleration: 14
+  moveDeceleration: 20
+  animatorDampTime: 0.12
+  stopAnimatorDampTime: 0.01
+  attackDuration: 0.65
+  attackDamageDelay: 0.15
+  attackDamageDuration: 0.25
+  slideDuration: 0.5
+  slideDistance: 3
   setCameraFollowTarget: 1
 --- !u!1001 &32643968517700812
 PrefabInstance:

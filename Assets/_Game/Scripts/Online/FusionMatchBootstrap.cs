@@ -12,6 +12,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private Transform[] spawnPoints;
     [SerializeField] private Player scenePlayerTemplate;
     [SerializeField] private int maxPlayers = 4;
+    [SerializeField] private float fallbackSpawnRadius = 1.8f;
     [SerializeField] private bool allowOfflineFallback = true;
 
     private NetworkRunner runner;
@@ -159,14 +160,26 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
 
-        Transform spawnPoint = GetLocalSpawnPoint();
-        Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+        int spawnIndex = GetSpawnIndexForPlayer(player);
+        Transform spawnPoint = GetSpawnPoint(spawnIndex);
+        Vector3 spawnPosition = GetSpawnPosition(spawnPoint, spawnIndex);
         Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
         localPlayerObject = runner.Spawn(networkPlayerPrefab, spawnPosition, spawnRotation, player);
         runner.SetPlayerObject(player, localPlayerObject);
 
-        Debug.Log($"FusionMatchBootstrap: spawned local player at {spawnPosition}.");
+        FusionPlayerAvatar playerAvatar = localPlayerObject.GetComponent<FusionPlayerAvatar>();
+        if (playerAvatar != null)
+        {
+            playerAvatar.SetInitialSpawn(spawnPosition, spawnRotation, spawnIndex);
+        }
+
+        Debug.Log(
+            $"FusionMatchBootstrap: spawned local player {player} " +
+            $"at index {spawnIndex}, position {spawnPosition}. " +
+            $"Actual={localPlayerObject.transform.position}, RoomSlot={GetLocalRoomPlayerIndex()}, " +
+            $"PlayerId={player.PlayerId}, AsIndex={player.AsIndex}, SpawnPoints={spawnPoints?.Length ?? 0}."
+        );
     }
 
     private void ResolveReferences()
@@ -231,28 +244,67 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return SystemInfo.deviceUniqueIdentifier;
     }
 
-    private Transform GetLocalSpawnPoint()
+    private Transform GetSpawnPoint(int spawnIndex)
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
             return null;
         }
 
-        int spawnIndex = GetLocalPlayerIndex();
-        spawnIndex = Mathf.Clamp(spawnIndex, 0, spawnPoints.Length - 1);
-        return spawnPoints[spawnIndex];
+        int pointIndex = Mathf.Abs(spawnIndex) % spawnPoints.Length;
+        return spawnPoints[pointIndex];
     }
 
-    private int GetLocalPlayerIndex()
+    private Vector3 GetSpawnPosition(Transform spawnPoint, int spawnIndex)
+    {
+        Vector3 basePosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+
+        if (spawnPoints != null && spawnPoints.Length > 1)
+        {
+            return basePosition;
+        }
+
+        if (spawnIndex <= 0)
+        {
+            return basePosition;
+        }
+
+        float angle = spawnIndex * 137.508f * Mathf.Deg2Rad;
+        float radius = Mathf.Max(0.5f, fallbackSpawnRadius);
+        return basePosition + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+    }
+
+    private int GetSpawnIndexForPlayer(PlayerRef player)
+    {
+        int roomPlayerIndex = GetLocalRoomPlayerIndex();
+        if (roomPlayerIndex >= 0)
+        {
+            return roomPlayerIndex;
+        }
+
+        if (player.IsRealPlayer && player.PlayerId > 0)
+        {
+            return player.PlayerId - 1;
+        }
+
+        if (player.IsRealPlayer && player.AsIndex > 0)
+        {
+            return player.AsIndex - 1;
+        }
+
+        return 0;
+    }
+
+    private int GetLocalRoomPlayerIndex()
     {
         List<RoomService.RoomPlayerData> players = OnlineRoomSession.Players;
         if (players == null || players.Count == 0 || string.IsNullOrWhiteSpace(SupabaseSession.UserId))
         {
-            return 0;
+            return -1;
         }
 
         int index = players.FindIndex(player => player != null && player.user_id == SupabaseSession.UserId);
-        return index >= 0 ? index : 0;
+        return index;
     }
 
     private void DisableScenePlayerTemplate()
@@ -270,7 +322,8 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
 
-        Transform spawnPoint = GetLocalSpawnPoint();
+        int roomPlayerIndex = GetLocalRoomPlayerIndex();
+        Transform spawnPoint = GetSpawnPoint(roomPlayerIndex >= 0 ? roomPlayerIndex : 0);
         if (spawnPoint != null)
         {
             scenePlayerTemplate.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);

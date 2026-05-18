@@ -15,6 +15,20 @@ public class Health : MonoBehaviour
         NotifyHealthChanged();
     }
 
+    public void SetHealthFromNetwork(int current, int max)
+    {
+        maxHealth = Mathf.Max(1, max);
+        int clampedCurrent = Mathf.Clamp(current, 0, maxHealth);
+
+        if (currentHealth == clampedCurrent)
+        {
+            return;
+        }
+
+        currentHealth = clampedCurrent;
+        NotifyHealthChanged();
+    }
+
     public void ApplyDamage(int damage)
     {
         if (IsDead || damage <= 0)
@@ -28,12 +42,7 @@ public class Health : MonoBehaviour
 
     public void AddHealth(int health)
     {
-        currentHealth += health;
-
-        if(currentHealth > maxHealth)
-        {
-            currentHealth = maxHealth;
-        }
+        currentHealth = Mathf.Clamp(currentHealth + health, 0, maxHealth);
 
         NotifyHealthChanged();
     }

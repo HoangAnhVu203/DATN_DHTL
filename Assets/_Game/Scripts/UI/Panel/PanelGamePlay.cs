@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public class PanelGamePlay : UICanvas
 {
     private const string PlayerTag = "Player";
-    private const float MaxPlayerHealth = 100f;
+    private const float PlayerSearchInterval = 0.25f;
 
     [SerializeField] private Button attackButton;
     [SerializeField] private Button slideButton;
@@ -21,6 +21,7 @@ public class PanelGamePlay : UICanvas
     private Health playerHealth;
     private Player subscribedPlayer;
     private Health subscribedPlayerHealth;
+    private float nextPlayerSearchTime;
 
     private void OnEnable()
     {
@@ -66,6 +67,23 @@ public class PanelGamePlay : UICanvas
         if (slideButton != null)
         {
             slideButton.onClick.RemoveListener(OnSlideButtonClicked);
+        }
+    }
+
+    private void Update()
+    {
+        if (Time.unscaledTime < nextPlayerSearchTime)
+        {
+            return;
+        }
+
+        nextPlayerSearchTime = Time.unscaledTime + PlayerSearchInterval;
+
+        if (playerHealth == null || subscribedPlayerHealth == null || fusionPlayerAvatar == null)
+        {
+            CachePlayer();
+            SubscribePlayerStats();
+            RefreshPlayerStats();
         }
     }
 
@@ -140,8 +158,9 @@ public class PanelGamePlay : UICanvas
         if (healthSlider != null)
         {
             healthSlider.minValue = 0f;
-            healthSlider.maxValue = MaxPlayerHealth;
+            healthSlider.maxValue = 100f;
             healthSlider.wholeNumbers = true;
+            EnsureHealthFillVisible();
         }
 
         if (coinText == null)
@@ -170,6 +189,15 @@ public class PanelGamePlay : UICanvas
 
     private void CachePlayer()
     {
+        FusionPlayerAvatar localAvatar = FindLocalFusionPlayerAvatar();
+        if (localAvatar != null)
+        {
+            fusionPlayerAvatar = localAvatar;
+            player = fusionPlayerAvatar.GetComponent<Player>();
+            playerHealth = fusionPlayerAvatar.GetComponent<Health>();
+            return;
+        }
+
         GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
 
         if (playerObject != null)
@@ -196,7 +224,7 @@ public class PanelGamePlay : UICanvas
 
         if (fusionPlayerAvatar == null)
         {
-            fusionPlayerAvatar = FindFirstObjectByType<FusionPlayerAvatar>();
+            fusionPlayerAvatar = FindLocalFusionPlayerAvatar();
         }
 
         if (fusionPlayerAvatar != null)
@@ -207,6 +235,21 @@ public class PanelGamePlay : UICanvas
         {
             playerHealth = player != null ? player.GetComponent<Health>() : null;
         }
+    }
+
+    private FusionPlayerAvatar FindLocalFusionPlayerAvatar()
+    {
+        FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
+
+        foreach (FusionPlayerAvatar avatar in avatars)
+        {
+            if (avatar != null && avatar.IsLocalPlayerAvatar)
+            {
+                return avatar;
+            }
+        }
+
+        return null;
     }
 
     private void SubscribePlayerStats()
@@ -261,8 +304,34 @@ public class PanelGamePlay : UICanvas
             return;
         }
 
-        healthSlider.maxValue = MaxPlayerHealth;
-        healthSlider.value = Mathf.Clamp(currentHealth, 0, (int)MaxPlayerHealth);
+        int safeMaxHealth = Mathf.Max(1, maxHealth);
+        healthSlider.minValue = 0f;
+        healthSlider.maxValue = safeMaxHealth;
+        healthSlider.SetValueWithoutNotify(Mathf.Clamp(currentHealth, 0, safeMaxHealth));
+        EnsureHealthFillVisible();
+    }
+
+    private void EnsureHealthFillVisible()
+    {
+        if (healthSlider == null || healthSlider.fillRect == null)
+        {
+            return;
+        }
+
+        healthSlider.fillRect.gameObject.SetActive(true);
+        Image fillImage = healthSlider.fillRect.GetComponent<Image>();
+
+        if (fillImage == null)
+        {
+            return;
+        }
+
+        Color fillColor = fillImage.color;
+        if (fillColor.a <= 0.01f)
+        {
+            fillColor.a = 1f;
+            fillImage.color = fillColor;
+        }
     }
 
     private void OnPlayerCoinChanged(int coin)

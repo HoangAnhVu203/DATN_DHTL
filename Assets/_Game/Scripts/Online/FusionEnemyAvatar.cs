@@ -10,6 +10,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
     [SerializeField] private NavMeshAgent navMeshAgent;
     [SerializeField] private DamageCaster damageCaster;
     [SerializeField] private Enemy_02_shoot rangedAttack;
+    [SerializeField] private FusionNetworkHealth networkHealth;
     [SerializeField] private float targetRefreshInterval = 0.25f;
     [SerializeField] private bool playSpawnDissolveOnAuthority = true;
 
@@ -76,6 +77,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         enemy.ApplyDamage(damage, attackPosition);
+        networkHealth?.ForceSyncNow();
     }
 
     private void ApplyAuthorityState()
@@ -150,6 +152,11 @@ public class FusionEnemyAvatar : NetworkBehaviour
         if (rangedAttack == null)
         {
             rangedAttack = GetComponent<Enemy_02_shoot>();
+        }
+
+        if (networkHealth == null)
+        {
+            networkHealth = GetComponent<FusionNetworkHealth>();
         }
     }
 
