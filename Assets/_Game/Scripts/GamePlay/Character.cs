@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Fusion;
 using UnityEngine;
 
 public abstract class Character : MonoBehaviour
@@ -66,6 +67,7 @@ public abstract class Character : MonoBehaviour
     protected float MoveSpeed => moveSpeed;
     protected virtual float HurtImpactForce => 0f;
     protected virtual bool CanBecomeInvincible => false;
+    public bool UseExternalMovementTick { get; set; }
 
     protected virtual void Awake()
     {
@@ -99,7 +101,7 @@ public abstract class Character : MonoBehaviour
 
     private void Update()
     {
-        if (rb != null)
+        if (UseExternalMovementTick || rb != null)
         {
             return;
         }
@@ -109,12 +111,22 @@ public abstract class Character : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (rb == null)
+        if (UseExternalMovementTick || rb == null)
         {
             return;
         }
 
         MoveCharacter(Time.fixedDeltaTime);
+    }
+
+    public void TickMovement(float deltaTime)
+    {
+        if (deltaTime <= 0f)
+        {
+            return;
+        }
+
+        MoveCharacter(deltaTime);
     }
 
     private void MoveCharacter(float deltaTime)
@@ -779,9 +791,49 @@ public abstract class Character : MonoBehaviour
 
     public void DropItem()
     {
-        if (itemDrop != null)
+        if (itemDrop == null)
         {
-            Instantiate(itemDrop, new Vector3(transform.position.x, 0.3f, transform.position.z), Quaternion.identity);
+            return;
+        }
+
+        Vector3 dropPosition = new Vector3(transform.position.x, 0.3f, transform.position.z);
+        FusionEnemyAvatar networkEnemy = GetComponent<FusionEnemyAvatar>();
+        if (networkEnemy != null && networkEnemy.Object != null && networkEnemy.Object.IsValid)
+        {
+            if (!networkEnemy.Object.HasStateAuthority)
+            {
+                return;
+            }
+
+            NetworkObject itemNetworkObject = itemDrop.GetComponent<NetworkObject>();
+            if (itemNetworkObject != null && networkEnemy.Runner != null && networkEnemy.Runner.IsRunning)
+            {
+                networkEnemy.Runner.Spawn(
+                    itemNetworkObject,
+                    dropPosition,
+                    Quaternion.identity,
+                    PlayerRef.None,
+                    null,
+                    NetworkSpawnFlags.SharedModeStateAuthMasterClient
+                );
+                return;
+            }
+        }
+
+        Instantiate(itemDrop, dropPosition, Quaternion.identity);
+    }
+
+    public void ApplyPickupValue(PickUpType pickupType, int value)
+    {
+        switch (pickupType)
+        {
+            case PickUpType.Health:
+                AddHealth(value);
+                break;
+
+            case PickUpType.Coin:
+                AddCoin(value);
+                break;
         }
     }
 

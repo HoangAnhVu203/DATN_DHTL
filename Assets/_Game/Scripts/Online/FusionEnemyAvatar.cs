@@ -5,18 +5,29 @@ using UnityEngine.AI;
 [DisallowMultipleComponent]
 public class FusionEnemyAvatar : NetworkBehaviour
 {
+    private static readonly int SpeedParameter = Animator.StringToHash("Speed");
+    private static readonly int IsGroundedParameter = Animator.StringToHash("IsGrounded");
+
     [SerializeField] private Enemy enemy;
     [SerializeField] private CharacterController characterController;
+    [SerializeField] private Animator animator;
     [SerializeField] private NavMeshAgent navMeshAgent;
     [SerializeField] private DamageCaster damageCaster;
     [SerializeField] private Enemy_02_shoot rangedAttack;
+    [SerializeField] private Health health;
     [SerializeField] private FusionNetworkHealth networkHealth;
     [SerializeField] private float targetRefreshInterval = 0.25f;
+    [SerializeField] private float proxyAnimationMoveSpeed = 2.5f;
+    [SerializeField] private float proxyAnimatorDampTime = 0.08f;
+    [SerializeField] private float proxyStopAnimatorDampTime = 0.02f;
     [SerializeField] private bool playSpawnDissolveOnAuthority = true;
 
     private bool? lastStateAuthority;
-    private float nextTargetRefreshTime;
+    private double nextTargetRefreshTime;
     private bool spawnDissolvePlayed;
+    private bool hasAppliedNetworkDeath;
+    private bool hasLastRenderPosition;
+    private Vector3 lastRenderPosition;
 
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
@@ -28,15 +39,31 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
     public override void Spawned()
     {
+        ResolveReferences();
+        SubscribeHealth();
+        ResetProxyAnimationTracking();
         ApplyAuthorityState();
     }
 
     private void OnEnable()
     {
+        ResolveReferences();
+        SubscribeHealth();
+
         if (Object != null && Object.IsValid)
         {
             ApplyAuthorityState();
         }
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeHealth();
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        UnsubscribeHealth();
     }
 
     private void Update()
@@ -47,14 +74,44 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         ApplyAuthorityState();
+    }
 
-        if (!Object.HasStateAuthority || enemy == null || Time.time < nextTargetRefreshTime)
+    public override void FixedUpdateNetwork()
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority || enemy == null)
         {
             return;
         }
 
-        nextTargetRefreshTime = Time.time + targetRefreshInterval;
-        enemy.SetTarget(FindClosestPlayer());
+        RefreshClosestTarget();
+        enemy.TickMovement(Runner.DeltaTime);
+    }
+
+    public override void Render()
+    {
+        if (Object == null || !Object.IsValid || Object.HasStateAuthority || animator == null)
+        {
+            ResetProxyAnimationTracking();
+            return;
+        }
+
+        float deltaTime = Time.deltaTime;
+        if (!hasLastRenderPosition || deltaTime <= 0f)
+        {
+            ResetProxyAnimationTracking();
+            return;
+        }
+
+        Vector3 movement = transform.position - lastRenderPosition;
+        movement.y = 0f;
+        lastRenderPosition = transform.position;
+
+        float moveSpeed = Mathf.Max(0.01f, proxyAnimationMoveSpeed);
+        float normalizedSpeed = Mathf.Clamp01(movement.magnitude / (deltaTime * moveSpeed));
+        float dampTime = normalizedSpeed > 0.001f ? proxyAnimatorDampTime : proxyStopAnimatorDampTime;
+
+        animator.SetFloat(SpeedParameter, normalizedSpeed, dampTime, deltaTime);
+        animator.SetBool(IsGroundedParameter, true);
     }
 
     public bool RequestDamage(int damage, Vector3 attackPosition)
@@ -91,12 +148,14 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         lastStateAuthority = hasStateAuthority;
+        ResetProxyAnimationTracking();
         gameObject.name = hasStateAuthority ? "NetworkEnemy_StateAuthority" : "NetworkEnemy_Proxy";
         gameObject.tag = hasStateAuthority ? "Enemy" : "Untagged";
 
         if (enemy != null)
         {
             enemy.enabled = hasStateAuthority;
+            enemy.UseExternalMovementTick = hasStateAuthority;
         }
 
         if (characterController != null)
@@ -127,6 +186,17 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    private void RefreshClosestTarget()
+    {
+        if (Runner == null || Runner.SimulationTime < nextTargetRefreshTime)
+        {
+            return;
+        }
+
+        nextTargetRefreshTime = Runner.SimulationTime + Mathf.Max(0.05f, targetRefreshInterval);
+        enemy.SetTarget(FindClosestPlayer());
+    }
+
     private void ResolveReferences()
     {
         if (enemy == null)
@@ -137,6 +207,11 @@ public class FusionEnemyAvatar : NetworkBehaviour
         if (characterController == null)
         {
             characterController = GetComponent<CharacterController>();
+        }
+
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
         }
 
         if (navMeshAgent == null)
@@ -158,6 +233,51 @@ public class FusionEnemyAvatar : NetworkBehaviour
         {
             networkHealth = GetComponent<FusionNetworkHealth>();
         }
+
+        if (health == null)
+        {
+            health = GetComponent<Health>();
+        }
+    }
+
+    private void SubscribeHealth()
+    {
+        if (health == null)
+        {
+            return;
+        }
+
+        health.HealthChanged -= OnHealthChanged;
+        health.HealthChanged += OnHealthChanged;
+    }
+
+    private void UnsubscribeHealth()
+    {
+        if (health != null)
+        {
+            health.HealthChanged -= OnHealthChanged;
+        }
+    }
+
+    private void OnHealthChanged(int current, int max)
+    {
+        if (current > 0 || hasAppliedNetworkDeath || enemy == null)
+        {
+            return;
+        }
+
+        hasAppliedNetworkDeath = true;
+
+        if (enemy.CurrentState != CharacterState.Dead)
+        {
+            enemy.SwitchToState(CharacterState.Dead, true);
+        }
+    }
+
+    private void ResetProxyAnimationTracking()
+    {
+        hasLastRenderPosition = true;
+        lastRenderPosition = transform.position;
     }
 
     private Transform FindClosestPlayer()
@@ -169,6 +289,12 @@ public class FusionEnemyAvatar : NetworkBehaviour
         foreach (FusionPlayerAvatar playerAvatar in players)
         {
             if (playerAvatar == null || !playerAvatar.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            Health playerHealth = playerAvatar.GetComponent<Health>();
+            if (playerHealth != null && playerHealth.IsDead)
             {
                 continue;
             }

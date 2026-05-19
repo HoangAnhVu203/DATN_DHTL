@@ -2942,7 +2942,7 @@ Transform:
   m_GameObject: {fileID: 907145305}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -7.78, y: 4, z: 9.41}
+  m_LocalPosition: {x: -7.78, y: 4.5, z: 9.41}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2960,6 +2960,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15a675f2825e19f4db3e09db3f6693ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
+  networkId: 1
   spawnPointRoot: {fileID: 720400063}
   gatesToOpen:
   - {fileID: 402471412}
@@ -2984,8 +2985,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 24.868652, y: 1, z: 5}
-  m_Center: {x: 1.9388127, y: 0, z: 0}
+  m_Size: {x: 20.640308, y: 1, z: 5}
+  m_Center: {x: -0.17535973, y: 0, z: 0}
 --- !u!1 &918215204
 GameObject:
   m_ObjectHideFlags: 0
@@ -4210,6 +4211,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15a675f2825e19f4db3e09db3f6693ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
+  networkId: 2
   spawnPointRoot: {fileID: 1852348744}
   gatesToOpen:
   - {fileID: 1808490179}
@@ -4234,8 +4236,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 24.868652, y: 1, z: 5}
-  m_Center: {x: 1.9388127, y: 0, z: 0}
+  m_Size: {x: 24.868652, y: 12.039689, z: 5}
+  m_Center: {x: 1.9388123, y: -2.5984778, z: 0}
 --- !u!1 &1625686734
 GameObject:
   m_ObjectHideFlags: 0
@@ -4347,6 +4349,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15a675f2825e19f4db3e09db3f6693ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
+  networkId: 0
   spawnPointRoot: {fileID: 1929794610}
   gatesToOpen:
   - {fileID: 1212030289}
@@ -4806,6 +4809,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac0d1526e54186f4fbf1dbe948cd05ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PickUp
+  networkId: 0
   type: 1
   value: 20
   collectedVFX: {fileID: 2620696320687690017, guid: 7cfced41b772d4a45aca452ccaca00d9, type: 3}

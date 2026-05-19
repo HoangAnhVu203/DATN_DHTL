@@ -108,6 +108,11 @@ public class Enemy : Character
 
     public void SetTarget(Transform newTarget)
     {
+        if (target == newTarget)
+        {
+            return;
+        }
+
         target = newTarget;
 
         if (agent != null && agent.isOnNavMesh)

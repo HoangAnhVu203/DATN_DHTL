@@ -44,6 +44,13 @@ public class DamageOrb : MonoBehaviour
         if (targetCharacter is Player)
         {
             targetCharacter.ApplyDamage(damage, transform.position);
+            DestroyOrb();
+            return;
+        }
+
+        if (targetCharacter != null)
+        {
+            return;
         }
 
         DestroyOrb();

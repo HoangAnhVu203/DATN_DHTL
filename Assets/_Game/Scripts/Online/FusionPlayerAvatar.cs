@@ -14,6 +14,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private const float MoveInputThreshold = 0.001f;
 
     [SerializeField] private Player player;
+    [SerializeField] private Health health;
     [SerializeField] private CharacterController characterController;
     [SerializeField] private Animator animator;
     [SerializeField] private DamageCaster damageCaster;
@@ -51,9 +52,22 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private int initialSpawnCorrectionTicks;
     private bool attackQueued;
     private bool slideQueued;
+    private bool hasAppliedNetworkDeath;
 
     public bool CanApplyDamageLocally => HasLocalControl();
     public bool IsLocalPlayerAvatar => HasLocalControl();
+    public PlayerRef NetworkPlayerRef
+    {
+        get
+        {
+            if (Object == null || !Object.IsValid)
+            {
+                return PlayerRef.None;
+            }
+
+            return Object.InputAuthority != PlayerRef.None ? Object.InputAuthority : Object.StateAuthority;
+        }
+    }
 
     public void SetInitialSpawn(Vector3 position, Quaternion rotation, int spawnIndex)
     {
@@ -71,11 +85,15 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     public override void Spawned()
     {
+        ResolveReferences();
+        SubscribeHealth();
         ApplyAuthorityState();
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
+        UnsubscribeHealth();
+
         if (HasLocalControl())
         {
             gameObject.tag = "Untagged";
@@ -84,10 +102,18 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void OnEnable()
     {
+        ResolveReferences();
+        SubscribeHealth();
+
         if (Object != null && Object.IsValid)
         {
             ApplyAuthorityState();
         }
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeHealth();
     }
 
     private void ApplyAuthorityState()
@@ -163,6 +189,11 @@ public class FusionPlayerAvatar : NetworkBehaviour
             characterController = GetComponent<CharacterController>();
         }
 
+        if (health == null)
+        {
+            health = GetComponent<Health>();
+        }
+
         if (animator == null)
         {
             animator = GetComponent<Animator>();
@@ -203,6 +234,12 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void Update()
     {
+        if (IsDead())
+        {
+            ClearLocalActions();
+            return;
+        }
+
         QueueKeyboardActions();
     }
 
@@ -210,6 +247,12 @@ public class FusionPlayerAvatar : NetworkBehaviour
     {
         if (!HasLocalControl() || characterController == null || !characterController.enabled)
         {
+            return;
+        }
+
+        if (IsDead())
+        {
+            StopLocalControlAfterDeath();
             return;
         }
 
@@ -243,7 +286,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     public void RequestAttack()
     {
-        if (!HasLocalControl())
+        if (!HasLocalControl() || IsDead())
         {
             return;
         }
@@ -253,7 +296,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     public void RequestSlide()
     {
-        if (!HasLocalControl())
+        if (!HasLocalControl() || IsDead())
         {
             return;
         }
@@ -270,6 +313,16 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         RPC_ApplyDamage(damage, attackPosition);
         return true;
+    }
+
+    public void RequestPickup(PickUpType pickupType, int value)
+    {
+        if (value <= 0 || Object == null || !Object.IsValid)
+        {
+            return;
+        }
+
+        RPC_ApplyPickup((int)pickupType, value);
     }
 
     private void MoveLocalPlayer(float deltaTime)
@@ -433,7 +486,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void QueueKeyboardActions()
     {
-        if (!HasLocalControl())
+        if (!HasLocalControl() || IsDead())
         {
             return;
         }
@@ -483,7 +536,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void TryStartAttack()
     {
-        if (attackTimer > 0f || slideTimer > 0f)
+        if (IsDead() || attackTimer > 0f || slideTimer > 0f)
         {
             return;
         }
@@ -491,13 +544,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
         attackTimer = Mathf.Max(attackDuration, 0f);
         attackDamageDelayTimer = Mathf.Max(attackDamageDelay, 0f);
         attackDamageTimer = Mathf.Max(attackDamageDuration, 0f);
-        damageCaster?.DisableDamageCaster();
+        damageCaster?.EndControlledDamageWindow();
         RPC_PlayAttack();
     }
 
     private void TryStartSlide()
     {
-        if (attackTimer > 0f || slideTimer > 0f)
+        if (IsDead() || attackTimer > 0f || slideTimer > 0f)
         {
             return;
         }
@@ -517,9 +570,9 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void UpdateAttackDamageWindow(float deltaTime)
     {
-        if (damageCaster == null || attackTimer <= 0f)
+        if (damageCaster == null || attackTimer <= 0f || IsDead())
         {
-            damageCaster?.DisableDamageCaster();
+            damageCaster?.EndControlledDamageWindow();
             return;
         }
 
@@ -529,19 +582,19 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
             if (attackDamageDelayTimer > 0f)
             {
-                damageCaster.DisableDamageCaster();
+                damageCaster.EndControlledDamageWindow();
                 return;
             }
         }
 
         if (attackDamageTimer > 0f)
         {
-            damageCaster.EnableDamageCaster();
+            damageCaster.BeginControlledDamageWindow();
             attackDamageTimer = Mathf.Max(attackDamageTimer - deltaTime, 0f);
             return;
         }
 
-        damageCaster.DisableDamageCaster();
+        damageCaster.EndControlledDamageWindow();
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
@@ -581,5 +634,164 @@ public class FusionPlayerAvatar : NetworkBehaviour
             character.ApplyDamage(damage, attackPosition);
             networkHealth?.ForceSyncNow();
         }
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_ApplyPickup(int pickupType, int value)
+    {
+        ResolveReferences();
+
+        Character character = player != null ? player : GetComponent<Character>();
+        if (character == null)
+        {
+            return;
+        }
+
+        character.ApplyPickupValue((PickUpType)pickupType, value);
+        networkHealth?.ForceSyncNow();
+    }
+
+    public bool BroadcastSpawnerCleared(int spawnerNetworkId)
+    {
+        if (Object == null || !Object.IsValid)
+        {
+            return false;
+        }
+
+        RPC_OpenSpawnerGates(spawnerNetworkId);
+        return true;
+    }
+
+    public bool BroadcastSpawnerSpawnRequested(int spawnerNetworkId)
+    {
+        if (Object == null || !Object.IsValid)
+        {
+            return false;
+        }
+
+        RPC_RequestSpawnerSpawn(spawnerNetworkId);
+        return true;
+    }
+
+    public bool RequestSpawnerSpawnOnStateAuthority(int spawnerNetworkId)
+    {
+        if (Object == null || !Object.IsValid)
+        {
+            return false;
+        }
+
+        RPC_RequestSpawnerSpawnOnStateAuthority(spawnerNetworkId);
+        return true;
+    }
+
+    public void BroadcastPickupCollected(int pickupNetworkId, Vector3 collectPosition)
+    {
+        if (Object == null || !Object.IsValid)
+        {
+            return;
+        }
+
+        RPC_CollectLocalPickup(pickupNetworkId, collectPosition);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    private void RPC_OpenSpawnerGates(int spawnerNetworkId)
+    {
+        Spawner.OpenGatesForNetworkId(spawnerNetworkId);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    private void RPC_RequestSpawnerSpawn(int spawnerNetworkId)
+    {
+        Spawner.SpawnForNetworkId(spawnerNetworkId);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestSpawnerSpawnOnStateAuthority(int spawnerNetworkId)
+    {
+        Spawner.SpawnForNetworkId(spawnerNetworkId);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    private void RPC_CollectLocalPickup(int pickupNetworkId, Vector3 collectPosition)
+    {
+        PickUp.CollectLocalPickupForNetworkId(pickupNetworkId, collectPosition);
+    }
+
+    private void SubscribeHealth()
+    {
+        if (health == null)
+        {
+            return;
+        }
+
+        health.HealthChanged -= OnHealthChanged;
+        health.HealthChanged += OnHealthChanged;
+    }
+
+    private void UnsubscribeHealth()
+    {
+        if (health != null)
+        {
+            health.HealthChanged -= OnHealthChanged;
+        }
+    }
+
+    private void OnHealthChanged(int current, int max)
+    {
+        if (current > 0 || hasAppliedNetworkDeath)
+        {
+            return;
+        }
+
+        ApplyNetworkDeath();
+    }
+
+    private bool IsDead()
+    {
+        return health != null && health.IsDead;
+    }
+
+    private void ApplyNetworkDeath()
+    {
+        if (hasAppliedNetworkDeath)
+        {
+            return;
+        }
+
+        hasAppliedNetworkDeath = true;
+        StopLocalControlAfterDeath();
+
+        Character character = player != null ? player : GetComponent<Character>();
+        if (character != null && character.CurrentState != CharacterState.Dead)
+        {
+            character.SwitchToState(CharacterState.Dead, true);
+        }
+    }
+
+    private void StopLocalControlAfterDeath()
+    {
+        ClearLocalActions();
+        smoothedMoveDirection = Vector3.zero;
+        slideDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        NetworkedSpeed = 0f;
+
+        damageCaster?.EndControlledDamageWindow();
+
+        if (animator != null)
+        {
+            animator.SetFloat(SpeedParameter, 0f);
+        }
+    }
+
+    private void ClearLocalActions()
+    {
+        attackQueued = false;
+        slideQueued = false;
+        attackTimer = 0f;
+        attackDamageDelayTimer = 0f;
+        attackDamageTimer = 0f;
+        slideTimer = 0f;
     }
 }
