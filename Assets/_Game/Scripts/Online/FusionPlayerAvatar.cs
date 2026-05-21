@@ -669,7 +669,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
             return false;
         }
 
-        RPC_RequestSpawnerSpawn(spawnerNetworkId);
+        RPC_RequestSpawnerSpawn(spawnerNetworkId, NetworkPlayerRef);
         return true;
     }
 
@@ -701,15 +701,15 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
-    private void RPC_RequestSpawnerSpawn(int spawnerNetworkId)
+    private void RPC_RequestSpawnerSpawn(int spawnerNetworkId, PlayerRef activatingPlayer)
     {
-        Spawner.SpawnForNetworkId(spawnerNetworkId);
+        Spawner.SpawnForNetworkId(spawnerNetworkId, activatingPlayer);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestSpawnerSpawnOnStateAuthority(int spawnerNetworkId)
     {
-        Spawner.SpawnForNetworkId(spawnerNetworkId);
+        Spawner.SpawnForNetworkId(spawnerNetworkId, NetworkPlayerRef);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]

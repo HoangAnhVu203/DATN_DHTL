@@ -2,12 +2,16 @@ using System;
 using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Spawner : MonoBehaviour
 {
     [SerializeField] private int networkId;
     [SerializeField] private Transform spawnPointRoot;
     [SerializeField] private Gate[] gatesToOpen;
+    [SerializeField] private bool snapSpawnPositionToGround = true;
+    [SerializeField] private float groundSnapMaxDistance = 25f;
+    [SerializeField] private float spawnGroundOffset = 0.05f;
 
     private List<SpawnPoint> spawnPointList;
 
@@ -59,15 +63,14 @@ public class Spawner : MonoBehaviour
                 $"LocalPlayer={networkRunner.LocalPlayer}, IsSharedModeMasterClient={networkRunner.IsSharedModeMasterClient}."
             );
 
-            if (!networkRunner.IsSharedModeMasterClient)
-            {
-                BroadcastSpawnRequestToNetwork();
-                return;
-            }
-
             hasSpawned = true;
             aliveEnemyCount = 0;
-            SpawnNetworkCharacters(networkRunner);
+            int spawnedCount = SpawnNetworkCharacters(networkRunner);
+            if (spawnedCount > 0)
+            {
+                BroadcastSpawnRequestToNetwork();
+            }
+
             return;
         }
 
@@ -77,16 +80,16 @@ public class Spawner : MonoBehaviour
         SpawnOfflineCharacters();
     }
 
-    private void SpawnFromNetworkRequest()
+    private void SpawnFromNetworkRequest(PlayerRef activatingPlayer)
     {
         Debug.Log(
             $"Spawner[{NetworkId}] '{GetHierarchyPath(transform)}': received spawn request. " +
-            $"hasSpawned={hasSpawned}, hasCleared={hasCleared}."
+            $"activatingPlayer={activatingPlayer}, hasSpawned={hasSpawned}, hasCleared={hasCleared}."
         );
 
-        if (hasSpawned || hasCleared)
+        if (hasCleared)
         {
-            Debug.Log($"Spawner[{NetworkId}] '{name}': spawn request ignored because hasSpawned={hasSpawned}, hasCleared={hasCleared}.");
+            Debug.Log($"Spawner[{NetworkId}] '{name}': spawn request ignored because hasCleared=True.");
             return;
         }
 
@@ -97,9 +100,24 @@ public class Spawner : MonoBehaviour
             return;
         }
 
-        if (!networkRunner.IsSharedModeMasterClient)
+        if (activatingPlayer != PlayerRef.None && networkRunner.LocalPlayer != activatingPlayer)
         {
-            Debug.Log($"Spawner[{NetworkId}] '{name}': spawn request received on non-master client, waiting for master.");
+            if (!hasSpawned)
+            {
+                hasSpawned = true;
+                aliveEnemyCount = 0;
+                Debug.Log(
+                    $"Spawner[{NetworkId}] '{name}': marked as spawned by remote activating player {activatingPlayer}. " +
+                    "Waiting for network enemies from that client."
+                );
+            }
+
+            return;
+        }
+
+        if (hasSpawned)
+        {
+            Debug.Log($"Spawner[{NetworkId}] '{name}': spawn request ignored because hasSpawned={hasSpawned}, hasCleared={hasCleared}.");
             return;
         }
 
@@ -118,12 +136,15 @@ public class Spawner : MonoBehaviour
                 continue;
             }
 
+            Vector3 spawnPosition = ResolveSpawnPosition(point);
+            Quaternion spawnRotation = point.transform.rotation;
+
             Debug.Log(
                 $"Spawner[{NetworkId}] '{name}': offline spawn '{point.EnemyToSpawn.name}' " +
-                $"at {point.transform.position} from point '{point.name}'."
+                $"at {spawnPosition} from point '{point.name}'. original={point.transform.position}."
             );
 
-            GameObject spawnedGameobject = Instantiate(point.EnemyToSpawn, point.transform.position, Quaternion.identity);
+            GameObject spawnedGameobject = Instantiate(point.EnemyToSpawn, spawnPosition, spawnRotation);
             Character spawnedCharacter = spawnedGameobject.GetComponent<Character>();
 
             if (spawnedCharacter == null)
@@ -145,13 +166,9 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    private void SpawnNetworkCharacters(NetworkRunner networkRunner)
+    private int SpawnNetworkCharacters(NetworkRunner networkRunner)
     {
-        if (!networkRunner.IsSharedModeMasterClient)
-        {
-            Debug.Log($"Spawner[{NetworkId}] '{name}': not shared-mode master client, waiting for master to spawn enemies.");
-            return;
-        }
+        int spawnedCount = 0;
 
         foreach (SpawnPoint point in spawnPointList)
         {
@@ -169,18 +186,21 @@ public class Spawner : MonoBehaviour
                 continue;
             }
 
+            Vector3 spawnPosition = ResolveSpawnPosition(point);
+            Quaternion spawnRotation = point.transform.rotation;
+
             Debug.Log(
                 $"Spawner[{NetworkId}] '{name}': network spawning '{point.EnemyToSpawn.name}' " +
-                $"at {point.transform.position} from point '{point.name}'."
+                $"at {spawnPosition} from point '{point.name}'. original={point.transform.position}."
             );
 
             NetworkObject spawnedObject = networkRunner.Spawn(
                 enemyNetworkObject,
-                point.transform.position,
-                Quaternion.identity,
+                spawnPosition,
+                spawnRotation,
                 PlayerRef.None,
                 null,
-                NetworkSpawnFlags.SharedModeStateAuthMasterClient
+                NetworkSpawnFlags.SharedModeStateAuthLocalPlayer
             );
 
             if (spawnedObject == null)
@@ -195,11 +215,17 @@ public class Spawner : MonoBehaviour
             Character spawnedCharacter = spawnedObject.GetComponent<Character>();
             if (spawnedCharacter == null)
             {
+                spawnedCharacter = spawnedObject.GetComponentInChildren<Character>();
+            }
+
+            if (spawnedCharacter == null)
+            {
                 Debug.LogWarning($"Spawner[{NetworkId}] '{name}': spawned object '{spawnedObject.name}' has no Character component.");
                 continue;
             }
 
             aliveEnemyCount++;
+            spawnedCount++;
             spawnedCharacter.Died += OnSpawnedCharacterDied;
             Debug.Log($"Spawner[{NetworkId}] '{name}': spawned '{spawnedObject.name}'. aliveEnemyCount={aliveEnemyCount}.");
         }
@@ -208,18 +234,27 @@ public class Spawner : MonoBehaviour
 
         if (aliveEnemyCount <= 0)
         {
-            ClearSpawner();
+            hasSpawned = false;
+            Debug.LogWarning(
+                $"Spawner[{NetworkId}] '{name}': no network enemies were counted after spawn. " +
+                "Keeping spawner uncleared so it can be retried. Check enemy prefab Character/NetworkObject setup."
+            );
         }
+
+        return spawnedCount;
     }
 
     private void SpawnOfflineCharacter(SpawnPoint point)
     {
+        Vector3 spawnPosition = ResolveSpawnPosition(point);
+        Quaternion spawnRotation = point.transform.rotation;
+
         Debug.Log(
             $"Spawner[{NetworkId}] '{name}': offline fallback spawn '{point.EnemyToSpawn.name}' " +
-            $"at {point.transform.position} from point '{point.name}'."
+            $"at {spawnPosition} from point '{point.name}'. original={point.transform.position}."
         );
 
-        GameObject spawnedGameobject = Instantiate(point.EnemyToSpawn, point.transform.position, Quaternion.identity);
+        GameObject spawnedGameobject = Instantiate(point.EnemyToSpawn, spawnPosition, spawnRotation);
         Character spawnedCharacter = spawnedGameobject.GetComponent<Character>();
 
         if (spawnedCharacter == null)
@@ -231,6 +266,51 @@ public class Spawner : MonoBehaviour
         aliveEnemyCount++;
         spawnedCharacter.Died += OnSpawnedCharacterDied;
         spawnedCharacter.PlaySpawnDissolve();
+    }
+
+    private Vector3 ResolveSpawnPosition(SpawnPoint point)
+    {
+        if (point == null)
+        {
+            return transform.position;
+        }
+
+        Vector3 originalPosition = point.transform.position;
+        if (!snapSpawnPositionToGround)
+        {
+            return originalPosition;
+        }
+
+        float snapDistance = Mathf.Max(0.1f, groundSnapMaxDistance);
+        float offset = Mathf.Max(0f, spawnGroundOffset);
+
+        if (NavMesh.SamplePosition(originalPosition, out NavMeshHit navMeshHit, snapDistance, NavMesh.AllAreas))
+        {
+            Vector3 snappedPosition = navMeshHit.position + Vector3.up * offset;
+            Debug.Log(
+                $"Spawner[{NetworkId}] '{name}': snapped spawn point '{point.name}' to NavMesh. " +
+                $"from {originalPosition} to {snappedPosition}."
+            );
+            return snappedPosition;
+        }
+
+        Vector3 rayOrigin = originalPosition + Vector3.up * snapDistance;
+        float rayDistance = snapDistance * 2f;
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, rayDistance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            Vector3 snappedPosition = hit.point + Vector3.up * offset;
+            Debug.Log(
+                $"Spawner[{NetworkId}] '{name}': snapped spawn point '{point.name}' to collider '{hit.collider.name}'. " +
+                $"from {originalPosition} to {snappedPosition}."
+            );
+            return snappedPosition;
+        }
+
+        Debug.LogWarning(
+            $"Spawner[{NetworkId}] '{name}': could not snap spawn point '{point.name}' to ground. " +
+            $"Using original position {originalPosition}."
+        );
+        return originalPosition;
     }
 
     private NetworkRunner FindActiveNetworkRunner()
@@ -344,24 +424,23 @@ public class Spawner : MonoBehaviour
 
         nextSpawnRequestTime = Time.time + 1f;
 
-        FusionPlayerAvatar spawnAuthorityAvatar = FindSpawnAuthorityAvatar();
-        if (spawnAuthorityAvatar != null && spawnAuthorityAvatar.RequestSpawnerSpawnOnStateAuthority(NetworkId))
+        FusionPlayerAvatar requestAvatar = FindSpawnRequestAvatar();
+        if (requestAvatar != null && requestAvatar.BroadcastSpawnerSpawnRequested(NetworkId))
         {
             Debug.Log(
-                $"Spawner[{NetworkId}] '{name}': sent spawn request to state authority of " +
-                $"'{spawnAuthorityAvatar.name}' PlayerRef={spawnAuthorityAvatar.NetworkPlayerRef}."
+                $"Spawner[{NetworkId}] '{name}': broadcasted spawned-state through " +
+                $"'{requestAvatar.name}' PlayerRef={requestAvatar.NetworkPlayerRef}."
             );
             return;
         }
 
-        Debug.LogWarning($"Spawner[{NetworkId}] '{name}': no FusionPlayerAvatar available to request spawn authority.");
+        Debug.LogWarning($"Spawner[{NetworkId}] '{name}': no FusionPlayerAvatar available to broadcast spawn request.");
     }
 
-    private FusionPlayerAvatar FindSpawnAuthorityAvatar()
+    private FusionPlayerAvatar FindSpawnRequestAvatar()
     {
         FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
-        FusionPlayerAvatar bestAvatar = null;
-        int bestPlayerId = int.MaxValue;
+        FusionPlayerAvatar fallbackAvatar = null;
 
         foreach (FusionPlayerAvatar avatar in avatars)
         {
@@ -370,23 +449,18 @@ public class Spawner : MonoBehaviour
                 continue;
             }
 
-            PlayerRef playerRef = avatar.NetworkPlayerRef;
-            int playerId = playerRef.PlayerId > 0 ? playerRef.PlayerId : playerRef.AsIndex;
-            if (playerId <= 0)
+            if (fallbackAvatar == null)
             {
-                continue;
+                fallbackAvatar = avatar;
             }
 
-            if (playerId >= bestPlayerId)
+            if (avatar.IsLocalPlayerAvatar)
             {
-                continue;
+                return avatar;
             }
-
-            bestPlayerId = playerId;
-            bestAvatar = avatar;
         }
 
-        return bestAvatar;
+        return fallbackAvatar;
     }
 
     public static void OpenGatesForNetworkId(int spawnerNetworkId)
@@ -404,13 +478,18 @@ public class Spawner : MonoBehaviour
 
     public static void SpawnForNetworkId(int spawnerNetworkId)
     {
+        SpawnForNetworkId(spawnerNetworkId, PlayerRef.None);
+    }
+
+    public static void SpawnForNetworkId(int spawnerNetworkId, PlayerRef activatingPlayer)
+    {
         Spawner[] spawners = FindObjectsByType<Spawner>(FindObjectsSortMode.None);
         foreach (Spawner spawner in spawners)
         {
             if (spawner != null && spawner.NetworkId == spawnerNetworkId)
             {
-                Debug.Log($"Spawner[{spawnerNetworkId}]: matched network spawn request on '{spawner.name}'.");
-                spawner.SpawnFromNetworkRequest();
+                Debug.Log($"Spawner[{spawnerNetworkId}]: matched network spawn request on '{spawner.name}' from {activatingPlayer}.");
+                spawner.SpawnFromNetworkRequest(activatingPlayer);
             }
         }
     }
@@ -462,6 +541,17 @@ public class Spawner : MonoBehaviour
             $"root='{other.transform.root.name}', tag='{other.tag}', isPlayerTag={isPlayerTag}, " +
             $"hasFusionPlayerAvatar={playerAvatar != null}, hasSpawned={hasSpawned}, hasCleared={hasCleared}."
         );
+
+        NetworkRunner networkRunner = FindActiveNetworkRunner();
+        if (networkRunner != null && networkRunner.IsRunning)
+        {
+            if (playerAvatar != null && playerAvatar.IsLocalPlayerAvatar)
+            {
+                SpawnCharacters();
+            }
+
+            return;
+        }
 
         if (isPlayerTag || playerAvatar != null)
         {

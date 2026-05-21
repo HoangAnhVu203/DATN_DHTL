@@ -20,6 +20,8 @@ public class FusionEnemyAvatar : NetworkBehaviour
     [SerializeField] private float proxyAnimationMoveSpeed = 2.5f;
     [SerializeField] private float proxyAnimatorDampTime = 0.08f;
     [SerializeField] private float proxyStopAnimatorDampTime = 0.02f;
+    [SerializeField] private float navMeshSnapDistance = 8f;
+    [SerializeField] private float targetPathSampleDistance = 2f;
     [SerializeField] private bool playSpawnDissolveOnAuthority = true;
 
     private bool? lastStateAuthority;
@@ -28,6 +30,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
     private bool hasAppliedNetworkDeath;
     private bool hasLastRenderPosition;
     private Vector3 lastRenderPosition;
+    private NavMeshPath reusablePath;
 
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
@@ -42,6 +45,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         ResolveReferences();
         SubscribeHealth();
         ResetProxyAnimationTracking();
+        reusablePath ??= new NavMeshPath();
         ApplyAuthorityState();
     }
 
@@ -83,6 +87,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
             return;
         }
 
+        EnsureAgentOnNavMesh();
         RefreshClosestTarget();
         enemy.TickMovement(Runner.DeltaTime);
     }
@@ -166,6 +171,11 @@ public class FusionEnemyAvatar : NetworkBehaviour
         if (navMeshAgent != null)
         {
             navMeshAgent.enabled = hasStateAuthority;
+
+            if (hasStateAuthority)
+            {
+                EnsureAgentOnNavMesh();
+            }
         }
 
         if (damageCaster != null)
@@ -195,6 +205,38 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
         nextTargetRefreshTime = Runner.SimulationTime + Mathf.Max(0.05f, targetRefreshInterval);
         enemy.SetTarget(FindClosestPlayer());
+    }
+
+    private void EnsureAgentOnNavMesh()
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled || navMeshAgent.isOnNavMesh)
+        {
+            return;
+        }
+
+        float sampleDistance = Mathf.Max(0.1f, navMeshSnapDistance);
+        if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
+        {
+            Debug.LogWarning($"FusionEnemyAvatar: '{name}' is not on NavMesh and no nearby NavMesh was found at {transform.position}.");
+            return;
+        }
+
+        bool controllerWasEnabled = characterController != null && characterController.enabled;
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
+
+        transform.position = hit.position;
+        navMeshAgent.Warp(hit.position);
+        navMeshAgent.ResetPath();
+
+        if (characterController != null)
+        {
+            characterController.enabled = controllerWasEnabled;
+        }
+
+        Debug.Log($"FusionEnemyAvatar: snapped '{name}' onto NavMesh at {hit.position}.");
     }
 
     private void ResolveReferences()
@@ -299,6 +341,11 @@ public class FusionEnemyAvatar : NetworkBehaviour
                 continue;
             }
 
+            if (!CanReachPlayer(playerAvatar.transform))
+            {
+                continue;
+            }
+
             float sqrDistance = (playerAvatar.transform.position - transform.position).sqrMagnitude;
             if (sqrDistance >= closestSqrDistance)
             {
@@ -310,5 +357,28 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         return closest;
+    }
+
+    private bool CanReachPlayer(Transform playerTransform)
+    {
+        if (playerTransform == null || navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            return true;
+        }
+
+        Vector3 targetPosition = playerTransform.position;
+        float sampleDistance = Mathf.Max(0.1f, targetPathSampleDistance);
+        if (NavMesh.SamplePosition(targetPosition, out NavMeshHit targetHit, sampleDistance, NavMesh.AllAreas))
+        {
+            targetPosition = targetHit.position;
+        }
+
+        reusablePath ??= new NavMeshPath();
+        if (!navMeshAgent.CalculatePath(targetPosition, reusablePath))
+        {
+            return false;
+        }
+
+        return reusablePath.status == NavMeshPathStatus.PathComplete;
     }
 }

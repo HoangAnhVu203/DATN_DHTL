@@ -4,6 +4,9 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class DamageCaster : MonoBehaviour
 {
+    private const float DuplicateHitLockSeconds = 0.25f;
+    private static readonly Dictionary<long, float> RecentNetworkHitTimes = new();
+
     private Collider damageCasterCollider;
     private PlayerVFXManager ownerVFXManager;
     private Character ownerCharacter;
@@ -14,6 +17,7 @@ public class DamageCaster : MonoBehaviour
     public int damage = 30;
     public string targetTag;
     private List<Character> damageTargetList;
+    private HashSet<int> damageTargetIdSet;
     private bool controlledDamageWindowActive;
 
     private void Awake()
@@ -27,6 +31,7 @@ public class DamageCaster : MonoBehaviour
         ownerNetworkEnemy = GetComponentInParent<FusionEnemyAvatar>();
         ownerRoot = ownerCharacter != null ? ownerCharacter.transform : null;
         damageTargetList = new List<Character>();
+        damageTargetIdSet = new HashSet<int>();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -60,7 +65,7 @@ public class DamageCaster : MonoBehaviour
             return;
         }
 
-        if (targetCharacter != null && damageTargetList.Contains(targetCharacter))
+        if (targetCharacter != null && HasDamagedTarget(targetCharacter))
         {
             return;
         }
@@ -76,14 +81,17 @@ public class DamageCaster : MonoBehaviour
         FusionEnemyAvatar targetNetworkEnemy = other.GetComponentInParent<FusionEnemyAvatar>();
         if (targetNetworkEnemy != null)
         {
+            if (HasDamagedTarget(targetNetworkEnemy) || IsRecentNetworkHit(targetNetworkEnemy))
+            {
+                return;
+            }
+
+            MarkRecentNetworkHit(targetNetworkEnemy);
             if (targetNetworkEnemy.RequestDamage(damage, attackerPosition))
             {
                 PlayHitVFX(other);
-
-                if (targetCharacter != null)
-                {
-                    damageTargetList.Add(targetCharacter);
-                }
+                MarkDamagedTarget(targetNetworkEnemy);
+                MarkDamagedTarget(targetCharacter);
             }
 
             return;
@@ -97,7 +105,7 @@ public class DamageCaster : MonoBehaviour
 
         targetCharacter.ApplyDamage(damage, attackerPosition);
         PlayHitVFX(other);
-        damageTargetList.Add(targetCharacter);
+        MarkDamagedTarget(targetCharacter);
     }
 
     private void TryApplyEnemyDamage(Collider other, Character targetCharacter, Vector3 attackerPosition)
@@ -111,27 +119,96 @@ public class DamageCaster : MonoBehaviour
         FusionPlayerAvatar targetNetworkPlayer = other.GetComponentInParent<FusionPlayerAvatar>();
         if (targetNetworkPlayer != null)
         {
+            if (HasDamagedTarget(targetNetworkPlayer) || IsRecentNetworkHit(targetNetworkPlayer))
+            {
+                return;
+            }
+
+            MarkRecentNetworkHit(targetNetworkPlayer);
             if (targetNetworkPlayer.RequestDamage(damage, attackerPosition))
             {
                 PlayHitVFX(other);
-
-                if (targetCharacter != null)
-                {
-                    damageTargetList.Add(targetCharacter);
-                }
+                MarkDamagedTarget(targetNetworkPlayer);
+                MarkDamagedTarget(targetCharacter);
             }
 
             return;
         }
 
-        if (targetCharacter is not Player)
+        if (targetCharacter is not Player || HasDamagedTarget(targetCharacter))
         {
             return;
         }
 
         targetCharacter.ApplyDamage(damage, attackerPosition);
         PlayHitVFX(other);
-        damageTargetList.Add(targetCharacter);
+        MarkDamagedTarget(targetCharacter);
+    }
+
+    private bool HasDamagedTarget(Component target)
+    {
+        return target != null && damageTargetIdSet.Contains(target.GetInstanceID());
+    }
+
+    private void MarkDamagedTarget(Component target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        damageTargetIdSet.Add(target.GetInstanceID());
+
+        if (target is Character character && !damageTargetList.Contains(character))
+        {
+        damageTargetList.Add(character);
+        }
+    }
+
+    private bool IsRecentNetworkHit(Component target)
+    {
+        long key = GetOwnerTargetKey(target);
+        if (key == 0)
+        {
+            return false;
+        }
+
+        float now = Time.time;
+        if (!RecentNetworkHitTimes.TryGetValue(key, out float lastHitTime))
+        {
+            return false;
+        }
+
+        return now - lastHitTime < DuplicateHitLockSeconds;
+    }
+
+    private void MarkRecentNetworkHit(Component target)
+    {
+        long key = GetOwnerTargetKey(target);
+        if (key == 0)
+        {
+            return;
+        }
+
+        RecentNetworkHitTimes[key] = Time.time;
+    }
+
+    private long GetOwnerTargetKey(Component target)
+    {
+        if (target == null)
+        {
+            return 0;
+        }
+
+        int ownerId = ownerRoot != null ? ownerRoot.GetInstanceID() : transform.root.GetInstanceID();
+        int targetId = target.transform.root.GetInstanceID();
+        return ((long)ownerId << 32) ^ (uint)targetId;
+    }
+
+    private void ClearDamagedTargets()
+    {
+        damageTargetList.Clear();
+        damageTargetIdSet.Clear();
     }
 
     private void PlayHitVFX(Collider targetCollider)
@@ -152,7 +229,7 @@ public class DamageCaster : MonoBehaviour
             return;
         }
 
-        damageTargetList.Clear();
+        ClearDamagedTargets();
         damageCasterCollider.enabled = true;
     }
 
@@ -171,7 +248,7 @@ public class DamageCaster : MonoBehaviour
         if (!controlledDamageWindowActive)
         {
             controlledDamageWindowActive = true;
-            damageTargetList.Clear();
+            ClearDamagedTargets();
         }
 
         damageCasterCollider.enabled = true;
@@ -186,7 +263,7 @@ public class DamageCaster : MonoBehaviour
     public void ForceDisableDamageCaster()
     {
         controlledDamageWindowActive = false;
-        damageTargetList.Clear();
+        ClearDamagedTargets();
         damageCasterCollider.enabled = false;
     }
 }
