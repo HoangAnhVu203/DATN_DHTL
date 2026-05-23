@@ -12,13 +12,16 @@ public class Enemy : Character
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackDuration = 0.65f;
     [SerializeField] private float attackTurnSpeed = 12f;
-    [SerializeField] private float detectionRange = 12f;
     [SerializeField] private float repathInterval = 0.2f;
+    [SerializeField] private float targetRefreshInterval = 0.25f;
+    [SerializeField] private float targetPathSampleDistance = 2f;
 
     private NavMeshAgent agent;
     private float nextRepathTime;
+    private float nextTargetRefreshTime;
     private float attackTimer;
     private Vector3 lastMoveDirection;
+    private NavMeshPath reusablePath;
     private float EffectiveAttackRange => Mathf.Max(attackRange, stoppingDistance);
 
     protected override void Awake()
@@ -32,33 +35,20 @@ public class Enemy : Character
         agent.acceleration = MoveSpeed * 4f;
         agent.angularSpeed = 720f;
         agent.stoppingDistance = stoppingDistance;
+        reusablePath = new NavMeshPath();
 
-        if (target == null)
-        {
-            GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
-            if (playerObject != null)
-            {
-                target = playerObject.transform;
-            }
-        }
+        RefreshClosestPlayerTarget();
     }
 
     protected override Vector3 GetMoveDirection()
     {
-        if (agent == null || target == null || !agent.isOnNavMesh)
+        if (target == null || Time.time >= nextTargetRefreshTime)
         {
-            return Vector3.zero;
+            RefreshClosestPlayerTarget();
         }
 
-        float sqrDistanceToTarget = (target.position - transform.position).sqrMagnitude;
-        if (sqrDistanceToTarget > detectionRange * detectionRange)
+        if (agent == null || target == null || !agent.isOnNavMesh)
         {
-            if (agent.hasPath)
-            {
-                agent.ResetPath();
-            }
-
-            lastMoveDirection = Vector3.zero;
             return Vector3.zero;
         }
 
@@ -72,12 +62,22 @@ public class Enemy : Character
         if (Time.time >= nextRepathTime)
         {
             nextRepathTime = Time.time + repathInterval;
-            agent.SetDestination(target.position);
+            if (!agent.SetDestination(target.position))
+            {
+                StopAgentPath();
+                return Vector3.zero;
+            }
         }
 
         if (agent.pathPending)
         {
             return lastMoveDirection;
+        }
+
+        if (agent.pathStatus != NavMeshPathStatus.PathComplete)
+        {
+            StopAgentPath();
+            return Vector3.zero;
         }
 
         if (!agent.hasPath || agent.remainingDistance <= stoppingDistance)
@@ -121,6 +121,75 @@ public class Enemy : Character
         }
 
         lastMoveDirection = Vector3.zero;
+        nextRepathTime = 0f;
+    }
+
+    public void RefreshClosestPlayerTarget()
+    {
+        nextTargetRefreshTime = Time.time + Mathf.Max(0.05f, targetRefreshInterval);
+
+        Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
+        Transform closestTarget = null;
+        float closestSqrDistance = float.MaxValue;
+
+        foreach (Player player in players)
+        {
+            if (player == null || !player.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            Health playerHealth = player.GetComponent<Health>();
+            if (playerHealth != null && playerHealth.IsDead)
+            {
+                continue;
+            }
+
+            if (!CanReachTarget(player.transform))
+            {
+                continue;
+            }
+
+            float sqrDistance = (player.transform.position - transform.position).sqrMagnitude;
+            if (sqrDistance >= closestSqrDistance)
+            {
+                continue;
+            }
+
+            closestSqrDistance = sqrDistance;
+            closestTarget = player.transform;
+        }
+
+        if (closestTarget == null && (agent == null || !agent.isOnNavMesh))
+        {
+            GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
+            closestTarget = playerObject != null ? playerObject.transform : null;
+        }
+
+        SetTarget(closestTarget);
+    }
+
+    private bool CanReachTarget(Transform candidateTarget)
+    {
+        if (candidateTarget == null || agent == null || !agent.isOnNavMesh)
+        {
+            return true;
+        }
+
+        Vector3 targetPosition = candidateTarget.position;
+        float sampleDistance = Mathf.Max(0.1f, targetPathSampleDistance);
+        if (NavMesh.SamplePosition(targetPosition, out NavMeshHit targetHit, sampleDistance, NavMesh.AllAreas))
+        {
+            targetPosition = targetHit.position;
+        }
+
+        reusablePath ??= new NavMeshPath();
+        if (!agent.CalculatePath(targetPosition, reusablePath))
+        {
+            return false;
+        }
+
+        return reusablePath.status == NavMeshPathStatus.PathComplete;
     }
 
     public void AttackAnimationEnds()

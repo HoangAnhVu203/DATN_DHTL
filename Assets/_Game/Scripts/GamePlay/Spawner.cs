@@ -155,6 +155,7 @@ public class Spawner : MonoBehaviour
 
             aliveEnemyCount++;
             spawnedCharacter.Died += OnSpawnedCharacterDied;
+            RefreshEnemyTarget(spawnedCharacter);
             spawnedCharacter.PlaySpawnDissolve();
         }
 
@@ -227,6 +228,7 @@ public class Spawner : MonoBehaviour
             aliveEnemyCount++;
             spawnedCount++;
             spawnedCharacter.Died += OnSpawnedCharacterDied;
+            RefreshEnemyTarget(spawnedCharacter);
             Debug.Log($"Spawner[{NetworkId}] '{name}': spawned '{spawnedObject.name}'. aliveEnemyCount={aliveEnemyCount}.");
         }
 
@@ -265,7 +267,16 @@ public class Spawner : MonoBehaviour
 
         aliveEnemyCount++;
         spawnedCharacter.Died += OnSpawnedCharacterDied;
+        RefreshEnemyTarget(spawnedCharacter);
         spawnedCharacter.PlaySpawnDissolve();
+    }
+
+    private void RefreshEnemyTarget(Character spawnedCharacter)
+    {
+        if (spawnedCharacter is Enemy spawnedEnemy)
+        {
+            spawnedEnemy.RefreshClosestPlayerTarget();
+        }
     }
 
     private Vector3 ResolveSpawnPosition(SpawnPoint point)

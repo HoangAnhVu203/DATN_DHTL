@@ -175,6 +175,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
             if (hasStateAuthority)
             {
                 EnsureAgentOnNavMesh();
+                ForceRefreshClosestTarget();
             }
         }
 
@@ -204,6 +205,16 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         nextTargetRefreshTime = Runner.SimulationTime + Mathf.Max(0.05f, targetRefreshInterval);
+        ForceRefreshClosestTarget();
+    }
+
+    private void ForceRefreshClosestTarget()
+    {
+        if (enemy == null)
+        {
+            return;
+        }
+
         enemy.SetTarget(FindClosestPlayer());
     }
 

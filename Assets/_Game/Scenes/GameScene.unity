@@ -2724,12 +2724,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -2801,6 +2801,22 @@ PrefabInstance:
     - target: {fileID: 2676143133362813466, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
       propertyPath: m_Name
       value: Canvas - JoyStick
+      objectReference: {fileID: 0}
+    - target: {fileID: 2974890990273681997, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
+      propertyPath: m_UiScaleMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2974890990273681997, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
+      propertyPath: m_MatchWidthOrHeight
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2974890990273681997, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
+      propertyPath: m_ReferenceResolution.x
+      value: 1920
+      objectReference: {fileID: 0}
+    - target: {fileID: 2974890990273681997, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
+      propertyPath: m_ReferenceResolution.y
+      value: 1080
       objectReference: {fileID: 0}
     - target: {fileID: 3714572615523142157, guid: 0b58bd6ea09687d45abb6523c3f808ff, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -3826,7 +3842,7 @@ Transform:
   m_GameObject: {fileID: 1323961229}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.84, y: 4.5, z: 20.06}
+  m_LocalPosition: {x: -4.7, y: 4.5, z: 19.54}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4270,7 +4286,7 @@ Transform:
   m_GameObject: {fileID: 1625686734}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 2.16, y: 4.5, z: 11.82}
+  m_LocalPosition: {x: 2.16, y: 4.50022, z: 11.82}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

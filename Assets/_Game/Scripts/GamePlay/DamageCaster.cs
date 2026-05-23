@@ -224,6 +224,17 @@ public class DamageCaster : MonoBehaviour
 
     public void EnableDamageCaster()
     {
+        if (ownerNetworkAvatar != null && ownerNetworkAvatar.Object != null && ownerNetworkAvatar.Object.IsValid)
+        {
+            return;
+        }
+
+        if (controlledDamageWindowActive)
+        {
+            damageCasterCollider.enabled = true;
+            return;
+        }
+
         if (damageCasterCollider.enabled)
         {
             return;
