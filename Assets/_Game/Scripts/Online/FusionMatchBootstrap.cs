@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Fusion;
 using Fusion.Photon.Realtime;
@@ -14,10 +15,12 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private int maxPlayers = 4;
     [SerializeField] private float fallbackSpawnRadius = 1.8f;
     [SerializeField] private bool allowOfflineFallback = true;
+    [SerializeField] private float waitForAllPlayersTimeout = 30f;
 
     private NetworkRunner runner;
     private NetworkObject localPlayerObject;
     private bool startRequested;
+    private Coroutine waitForPlayersCoroutine;
 
     private async void Start()
     {
@@ -29,6 +32,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
             if (allowOfflineFallback)
             {
                 Debug.LogWarning("FusionMatchBootstrap: no OnlineRoomSession.MatchId found, keeping offline scene player.");
+                OnlineMatchLoadingOverlay.Hide();
                 PlaceOfflinePlayer();
             }
             else
@@ -39,9 +43,12 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
             return;
         }
 
+        OnlineMatchLoadingOverlay.Show(0.6f);
+
         if (networkPlayerPrefab == null)
         {
             Debug.LogError("FusionMatchBootstrap: Network Player Prefab is not assigned.");
+            OnlineMatchLoadingOverlay.Hide();
             return;
         }
 
@@ -77,9 +84,11 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (!result.Ok)
         {
             Debug.LogError($"FusionMatchBootstrap: failed to join match session '{sessionName}'. Reason: {result.ShutdownReason}");
+            OnlineMatchLoadingOverlay.Hide();
             return;
         }
 
+        OnlineMatchLoadingOverlay.SetProgress(0.8f);
         Debug.Log($"FusionMatchBootstrap: joined Photon Fusion session '{sessionName}'.");
         SpawnLocalPlayerIfNeeded(runner.LocalPlayer);
     }
@@ -89,6 +98,12 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (runner != null)
         {
             runner.RemoveCallbacks(this);
+        }
+
+        if (waitForPlayersCoroutine != null)
+        {
+            StopCoroutine(waitForPlayersCoroutine);
+            waitForPlayersCoroutine = null;
         }
     }
 
@@ -157,6 +172,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (runner.TryGetPlayerObject(player, out NetworkObject existingPlayerObject) && existingPlayerObject != null)
         {
             localPlayerObject = existingPlayerObject;
+            StartWaitForAllPlayersSpawned();
             return;
         }
 
@@ -167,6 +183,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
 
         localPlayerObject = runner.Spawn(networkPlayerPrefab, spawnPosition, spawnRotation, player);
         runner.SetPlayerObject(player, localPlayerObject);
+        OnlineMatchLoadingOverlay.SetProgress(0.85f);
 
         FusionPlayerAvatar playerAvatar = localPlayerObject.GetComponent<FusionPlayerAvatar>();
         if (playerAvatar != null)
@@ -180,6 +197,96 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
             $"Actual={localPlayerObject.transform.position}, RoomSlot={GetLocalRoomPlayerIndex()}, " +
             $"PlayerId={player.PlayerId}, AsIndex={player.AsIndex}, SpawnPoints={spawnPoints?.Length ?? 0}."
         );
+
+        StartWaitForAllPlayersSpawned();
+    }
+
+    private void StartWaitForAllPlayersSpawned()
+    {
+        if (waitForPlayersCoroutine != null)
+        {
+            return;
+        }
+
+        waitForPlayersCoroutine = StartCoroutine(WaitForAllPlayersSpawnedRoutine());
+    }
+
+    private IEnumerator WaitForAllPlayersSpawnedRoutine()
+    {
+        int expectedPlayerCount = GetExpectedPlayerCount();
+        float elapsedTime = 0f;
+
+        while (elapsedTime < waitForAllPlayersTimeout)
+        {
+            int spawnedPlayerCount = CountSpawnedNetworkPlayers();
+            bool localPlayerSpawned = localPlayerObject != null
+                                      && localPlayerObject.IsValid;
+
+            float playerProgress = expectedPlayerCount <= 0
+                ? 1f
+                : Mathf.Clamp01((float)spawnedPlayerCount / expectedPlayerCount);
+
+            OnlineMatchLoadingOverlay.SetProgress(Mathf.Lerp(0.85f, 0.98f, playerProgress));
+
+            if (localPlayerSpawned && spawnedPlayerCount >= expectedPlayerCount)
+            {
+                OnlineMatchLoadingOverlay.SetProgress(1f);
+                yield return new WaitForSecondsRealtime(0.2f);
+                OnlineMatchLoadingOverlay.Hide();
+                waitForPlayersCoroutine = null;
+                yield break;
+            }
+
+            elapsedTime += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        Debug.LogWarning(
+            $"FusionMatchBootstrap: timed out waiting for all players to spawn. " +
+            $"Spawned={CountSpawnedNetworkPlayers()}, Expected={expectedPlayerCount}."
+        );
+
+        OnlineMatchLoadingOverlay.Hide();
+        waitForPlayersCoroutine = null;
+    }
+
+    private int GetExpectedPlayerCount()
+    {
+        if (OnlineRoomSession.ExpectedMatchPlayerCount > 0)
+        {
+            return OnlineRoomSession.ExpectedMatchPlayerCount;
+        }
+
+        if (OnlineRoomSession.Players != null && OnlineRoomSession.Players.Count > 0)
+        {
+            return OnlineRoomSession.Players.Count;
+        }
+
+        return 1;
+    }
+
+    private int CountSpawnedNetworkPlayers()
+    {
+        FusionPlayerAvatar[] playerAvatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
+        int count = 0;
+
+        foreach (FusionPlayerAvatar playerAvatar in playerAvatars)
+        {
+            if (playerAvatar == null || !playerAvatar.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            NetworkObject playerObject = playerAvatar.Object;
+            if (playerObject == null || !playerObject.IsValid)
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
     }
 
     private void ResolveReferences()

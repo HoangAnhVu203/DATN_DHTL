@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PanelRoomMatch : UICanvas
@@ -518,10 +517,11 @@ public class PanelRoomMatch : UICanvas
         }
 
         OnlineRoomSession.SetMatch(match);
+        OnlineRoomSession.CacheExpectedMatchPlayerCount();
         isLoadingMatchScene = true;
         StopRefreshing();
         SetButtonsInteractable(false);
-        SceneManager.LoadScene(gameSceneName);
+        OnlineMatchLoadingOverlay.LoadScene(gameSceneName);
     }
 
     private void RefreshActionButton()

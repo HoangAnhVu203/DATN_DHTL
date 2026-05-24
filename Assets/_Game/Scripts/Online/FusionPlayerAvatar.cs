@@ -1,6 +1,8 @@
 using Fusion;
+using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -33,9 +35,36 @@ public class FusionPlayerAvatar : NetworkBehaviour
     [SerializeField] private float slideDuration = 0.5f;
     [SerializeField] private float slideDistance = 3f;
     [SerializeField] private bool setCameraFollowTarget = true;
+    [Header("Revive")]
+    [SerializeField] private int initialRevivesRemaining = 1;
+    [SerializeField] private float reviveDistance = 2.4f;
+    [SerializeField] private float reviveHealthPercent = 0.5f;
+    [Header("Nameplate")]
+    [SerializeField] private bool showDisplayName = true;
+    [SerializeField] private float displayNameHeight = 2.25f;
+    [SerializeField] private float displayNameFontSize = 3f;
+    [SerializeField] private Vector3 displayNameScale = new Vector3(0.08f, 0.08f, 0.08f);
+    [SerializeField] private Color displayNameColor = Color.white;
+    [Header("Nameplate Health")]
+    [SerializeField] private bool showNameplateHealthBar = true;
+    [SerializeField] private bool showLocalNameplateHealthBar;
+    [SerializeField] private bool useGameplayHealthBarStyle = true;
+    [SerializeField] private float healthBarHeightOffset = -0.26f;
+    [SerializeField] private Vector2 healthBarSize = new Vector2(140f, 18f);
+    [SerializeField] private float healthBarWorldScale = 0.01f;
+    [SerializeField] private float healthBarFillSpeed = 4f;
+    [SerializeField] private Color healthBarBackgroundColor = new Color(0f, 0f, 0f, 0.65f);
+    [SerializeField] private Color healthBarFillColor = new Color(0.2f, 0.95f, 0.35f, 0.95f);
+    [SerializeField] private Color healthBarLowFillColor = new Color(0.95f, 0.22f, 0.16f, 0.95f);
+    [SerializeField] private Color healthBarTextColor = Color.white;
 
     [Networked] private float NetworkedSpeed { get; set; }
     [Networked] private NetworkBool NetworkedGrounded { get; set; }
+    [Networked, Capacity(32)] private NetworkString<_32> NetworkedDisplayName { get; set; }
+    [Networked] public int RevivesRemaining { get; private set; }
+    [Networked] public NetworkBool IsDowned { get; private set; }
+    [Networked] public NetworkBool IsEliminated { get; private set; }
+    [Networked] private NetworkBool ReviveStateInitialized { get; set; }
 
     private bool? lastLocalControlState;
     private bool cameraBound;
@@ -53,9 +82,30 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private bool attackQueued;
     private bool slideQueued;
     private bool hasAppliedNetworkDeath;
+    private int lastDamageSourceId;
+    private double lastDamageTime = -999d;
+    private TextMeshPro displayNameText;
+    private string lastRenderedDisplayName;
+    private Canvas healthBarCanvas;
+    private RectTransform healthBarFillRect;
+    private Image healthBarFrameImage;
+    private Image healthBarBackgroundImage;
+    private Image healthBarFillImage;
+    private TMP_Text healthBarText;
+    private float displayedHealthRatio = -1f;
+    private int lastRenderedCurrentHealth = -1;
+    private int lastRenderedMaxHealth = -1;
+
+    private const double DuplicateDamageLockSeconds = 0.3d;
+    private static Sprite whiteSprite;
+    private static HealthBarStyle gameplayHealthBarStyle;
+    private static bool gameplayHealthBarStyleLoaded;
 
     public bool CanApplyDamageLocally => HasLocalControl();
     public bool IsLocalPlayerAvatar => HasLocalControl();
+    public float ReviveDistance => reviveDistance;
+    public bool CanBeRevived => IsDowned && !IsEliminated && RevivesRemaining > 0;
+    public bool CanReviveOthers => HasLocalControl() && !IsDowned && !IsEliminated && !IsDead();
     public PlayerRef NetworkPlayerRef
     {
         get
@@ -87,7 +137,10 @@ public class FusionPlayerAvatar : NetworkBehaviour
     {
         ResolveReferences();
         SubscribeHealth();
+        InitializeReviveState();
         ApplyAuthorityState();
+        SetLocalDisplayNameIfNeeded();
+        RefreshDisplayNameView();
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -107,6 +160,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         if (Object != null && Object.IsValid)
         {
+            InitializeReviveState();
             ApplyAuthorityState();
         }
     }
@@ -177,6 +231,19 @@ public class FusionPlayerAvatar : NetworkBehaviour
                || Object.StateAuthority == localPlayer;
     }
 
+    private void InitializeReviveState()
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority || ReviveStateInitialized)
+        {
+            return;
+        }
+
+        ReviveStateInitialized = true;
+        RevivesRemaining = Mathf.Max(0, initialRevivesRemaining);
+        IsDowned = false;
+        IsEliminated = false;
+    }
+
     private void ResolveReferences()
     {
         if (player == null)
@@ -229,7 +296,465 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (Object != null && Object.IsValid)
         {
             ApplyAuthorityState();
+            RefreshDisplayNameView();
         }
+    }
+
+    private void SetLocalDisplayNameIfNeeded()
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
+        {
+            return;
+        }
+
+        string displayName = GetLocalDisplayName();
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            NetworkedDisplayName = displayName;
+        }
+    }
+
+    private string GetLocalDisplayName()
+    {
+        if (!string.IsNullOrWhiteSpace(SupabaseSession.DisplayName))
+        {
+            return SupabaseSession.DisplayName.Trim();
+        }
+
+        if (OnlineRoomSession.Players != null && !string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            RoomService.RoomPlayerData roomPlayer = OnlineRoomSession.Players.Find(
+                playerData => playerData != null && playerData.user_id == SupabaseSession.UserId
+            );
+
+            if (roomPlayer != null && !string.IsNullOrWhiteSpace(roomPlayer.display_name))
+            {
+                return roomPlayer.display_name.Trim();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(SupabaseSession.Email))
+        {
+            int atIndex = SupabaseSession.Email.IndexOf('@');
+            return atIndex > 0 ? SupabaseSession.Email.Substring(0, atIndex) : SupabaseSession.Email;
+        }
+
+        return "Player";
+    }
+
+    private void RefreshDisplayNameView()
+    {
+        if (!showDisplayName)
+        {
+            if (displayNameText != null)
+            {
+                displayNameText.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
+        EnsureDisplayNameText();
+
+        if (displayNameText == null)
+        {
+            return;
+        }
+
+        string displayName = NetworkedDisplayName.ToString();
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName = HasLocalControl() ? GetLocalDisplayName() : "Player";
+        }
+
+        if (lastRenderedDisplayName != displayName)
+        {
+            lastRenderedDisplayName = displayName;
+            displayNameText.text = displayName;
+        }
+
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            Transform textTransform = displayNameText.transform;
+            textTransform.position = transform.position + Vector3.up * displayNameHeight;
+            textTransform.rotation = Quaternion.LookRotation(textTransform.position - mainCamera.transform.position);
+        }
+
+        RefreshNameplateHealthBar(mainCamera);
+    }
+
+    private void EnsureDisplayNameText()
+    {
+        if (displayNameText != null)
+        {
+            return;
+        }
+
+        Transform existingNameplate = transform.Find("DisplayNameText");
+        if (existingNameplate != null)
+        {
+            displayNameText = existingNameplate.GetComponent<TextMeshPro>();
+        }
+
+        if (displayNameText == null)
+        {
+            GameObject nameObject = new GameObject("DisplayNameText");
+            nameObject.transform.SetParent(transform);
+            nameObject.transform.localPosition = Vector3.up * displayNameHeight;
+            nameObject.transform.localRotation = Quaternion.identity;
+            nameObject.transform.localScale = displayNameScale;
+            displayNameText = nameObject.AddComponent<TextMeshPro>();
+        }
+
+        displayNameText.alignment = TextAlignmentOptions.Center;
+        displayNameText.fontSize = displayNameFontSize;
+        displayNameText.color = displayNameColor;
+        displayNameText.enableWordWrapping = false;
+        displayNameText.raycastTarget = false;
+        displayNameText.gameObject.SetActive(true);
+    }
+
+    private void RefreshNameplateHealthBar(Camera mainCamera)
+    {
+        bool shouldShow = showNameplateHealthBar && (!HasLocalControl() || showLocalNameplateHealthBar);
+        if (!shouldShow)
+        {
+            if (healthBarCanvas != null)
+            {
+                healthBarCanvas.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
+        EnsureHealthBarCanvas();
+
+        if (healthBarCanvas == null)
+        {
+            return;
+        }
+
+        healthBarCanvas.gameObject.SetActive(true);
+
+        int maxHealth = Mathf.Max(1, GetNameplateMaxHealth());
+        int currentHealth = Mathf.Clamp(GetNameplateCurrentHealth(maxHealth), 0, maxHealth);
+        float targetRatio = Mathf.Clamp01((float)currentHealth / maxHealth);
+
+        if (displayedHealthRatio < 0f)
+        {
+            displayedHealthRatio = targetRatio;
+        }
+        else
+        {
+            displayedHealthRatio = Mathf.MoveTowards(
+                displayedHealthRatio,
+                targetRatio,
+                Mathf.Max(0.1f, healthBarFillSpeed) * Time.deltaTime
+            );
+        }
+
+        if (healthBarFillRect != null)
+        {
+            healthBarFillRect.anchorMax = new Vector2(displayedHealthRatio, 1f);
+        }
+
+        if (healthBarFillImage != null)
+        {
+            if (!useGameplayHealthBarStyle)
+            {
+                healthBarFillImage.color = Color.Lerp(healthBarLowFillColor, healthBarFillColor, displayedHealthRatio);
+            }
+        }
+
+        if (healthBarText != null
+            && (lastRenderedCurrentHealth != currentHealth || lastRenderedMaxHealth != maxHealth))
+        {
+            lastRenderedCurrentHealth = currentHealth;
+            lastRenderedMaxHealth = maxHealth;
+            healthBarText.text = $"{currentHealth}/{maxHealth}";
+        }
+
+        if (mainCamera != null)
+        {
+            Transform canvasTransform = healthBarCanvas.transform;
+            canvasTransform.position = transform.position + Vector3.up * (displayNameHeight + healthBarHeightOffset);
+            canvasTransform.rotation = Quaternion.LookRotation(canvasTransform.position - mainCamera.transform.position);
+        }
+    }
+
+    private int GetNameplateMaxHealth()
+    {
+        if (networkHealth != null && networkHealth.MaxHealth > 0)
+        {
+            return networkHealth.MaxHealth;
+        }
+
+        return health != null ? health.maxHealth : 100;
+    }
+
+    private int GetNameplateCurrentHealth(int maxHealth)
+    {
+        if (networkHealth != null && networkHealth.MaxHealth > 0)
+        {
+            return networkHealth.CurrentHealth;
+        }
+
+        return health != null ? health.currentHealth : maxHealth;
+    }
+
+    private void EnsureHealthBarCanvas()
+    {
+        if (healthBarCanvas != null)
+        {
+            ApplyGameplayHealthBarStyle();
+            return;
+        }
+
+        Transform existingHealthBar = transform.Find("NameplateHealthBar");
+        if (existingHealthBar != null)
+        {
+            healthBarCanvas = existingHealthBar.GetComponent<Canvas>();
+            healthBarFillRect = FindChildRect(existingHealthBar, "Fill");
+            healthBarFrameImage = FindChildImage(existingHealthBar, "Frame");
+            healthBarBackgroundImage = FindChildImage(existingHealthBar, "Background");
+            healthBarFillImage = healthBarFillRect != null ? healthBarFillRect.GetComponent<Image>() : null;
+            healthBarText = existingHealthBar.GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (healthBarCanvas != null)
+        {
+            ApplyGameplayHealthBarStyle();
+            return;
+        }
+
+        GameObject canvasObject = new GameObject("NameplateHealthBar");
+        canvasObject.transform.SetParent(transform);
+        canvasObject.transform.localPosition = Vector3.up * (displayNameHeight + healthBarHeightOffset);
+        canvasObject.transform.localRotation = Quaternion.identity;
+        canvasObject.transform.localScale = Vector3.one * healthBarWorldScale;
+
+        healthBarCanvas = canvasObject.AddComponent<Canvas>();
+        healthBarCanvas.renderMode = RenderMode.WorldSpace;
+        healthBarCanvas.sortingOrder = short.MaxValue - 1;
+
+        RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
+        canvasRect.sizeDelta = healthBarSize;
+
+        GameObject backgroundObject = new GameObject("Background");
+        backgroundObject.transform.SetParent(canvasObject.transform, false);
+        RectTransform backgroundRect = backgroundObject.AddComponent<RectTransform>();
+        backgroundRect.anchorMin = Vector2.zero;
+        backgroundRect.anchorMax = Vector2.one;
+        backgroundRect.offsetMin = Vector2.zero;
+        backgroundRect.offsetMax = Vector2.zero;
+        healthBarBackgroundImage = backgroundObject.AddComponent<Image>();
+        healthBarBackgroundImage.sprite = GetWhiteSprite();
+        healthBarBackgroundImage.color = healthBarBackgroundColor;
+        healthBarBackgroundImage.raycastTarget = false;
+
+        GameObject fillObject = new GameObject("Fill");
+        fillObject.transform.SetParent(backgroundObject.transform, false);
+        healthBarFillRect = fillObject.AddComponent<RectTransform>();
+        healthBarFillRect.anchorMin = Vector2.zero;
+        healthBarFillRect.anchorMax = Vector2.one;
+        healthBarFillRect.offsetMin = Vector2.zero;
+        healthBarFillRect.offsetMax = Vector2.zero;
+        healthBarFillImage = fillObject.AddComponent<Image>();
+        healthBarFillImage.sprite = GetWhiteSprite();
+        healthBarFillImage.color = healthBarFillColor;
+        healthBarFillImage.raycastTarget = false;
+
+        GameObject frameObject = new GameObject("Frame");
+        frameObject.transform.SetParent(canvasObject.transform, false);
+        RectTransform frameRect = frameObject.AddComponent<RectTransform>();
+        frameRect.anchorMin = Vector2.zero;
+        frameRect.anchorMax = Vector2.one;
+        frameRect.offsetMin = Vector2.zero;
+        frameRect.offsetMax = Vector2.zero;
+        healthBarFrameImage = frameObject.AddComponent<Image>();
+        healthBarFrameImage.sprite = GetWhiteSprite();
+        healthBarFrameImage.color = Color.clear;
+        healthBarFrameImage.raycastTarget = false;
+
+        GameObject textObject = new GameObject("HealthText");
+        textObject.transform.SetParent(canvasObject.transform, false);
+        RectTransform textRect = textObject.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+        healthBarText = textObject.AddComponent<TextMeshProUGUI>();
+        healthBarText.alignment = TextAlignmentOptions.Center;
+        healthBarText.fontSize = 11f;
+        healthBarText.color = healthBarTextColor;
+        healthBarText.enableWordWrapping = false;
+        healthBarText.raycastTarget = false;
+
+        ApplyGameplayHealthBarStyle();
+    }
+
+    private static RectTransform FindChildRect(Transform root, string childName)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name == childName)
+            {
+                return child.GetComponent<RectTransform>();
+            }
+        }
+
+        return null;
+    }
+
+    private static Image FindChildImage(Transform root, string childName)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name == childName)
+            {
+                return child.GetComponent<Image>();
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyGameplayHealthBarStyle()
+    {
+        if (!useGameplayHealthBarStyle)
+        {
+            return;
+        }
+
+        HealthBarStyle style = GetGameplayHealthBarStyle();
+        if (!style.IsValid)
+        {
+            return;
+        }
+
+        ApplyImageStyle(healthBarFrameImage, style.frame);
+        ApplyImageStyle(healthBarBackgroundImage, style.background);
+        ApplyImageStyle(healthBarFillImage, style.fill);
+    }
+
+    private static HealthBarStyle GetGameplayHealthBarStyle()
+    {
+        if (gameplayHealthBarStyleLoaded)
+        {
+            return gameplayHealthBarStyle;
+        }
+
+        gameplayHealthBarStyleLoaded = true;
+        PanelGamePlay gameplayPanelPrefab = Resources.Load<PanelGamePlay>("UI/Panel - GamePlay");
+        if (gameplayPanelPrefab == null)
+        {
+            return gameplayHealthBarStyle;
+        }
+
+        Transform healthSliderTransform = FindChildTransform(gameplayPanelPrefab.transform, "Health Slider");
+        if (healthSliderTransform == null)
+        {
+            return gameplayHealthBarStyle;
+        }
+
+        Slider slider = healthSliderTransform.GetComponent<Slider>();
+        Image frameImage = healthSliderTransform.GetComponent<Image>();
+        Image backgroundImage = FindChildImage(healthSliderTransform, "Background");
+        Image fillImage = slider != null && slider.fillRect != null
+            ? slider.fillRect.GetComponent<Image>()
+            : FindChildImage(healthSliderTransform, "Fill");
+
+        gameplayHealthBarStyle = new HealthBarStyle
+        {
+            frame = ImageStyle.FromImage(frameImage),
+            background = ImageStyle.FromImage(backgroundImage),
+            fill = ImageStyle.FromImage(fillImage)
+        };
+
+        return gameplayHealthBarStyle;
+    }
+
+    private static Transform FindChildTransform(Transform root, string childName)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name == childName)
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static void ApplyImageStyle(Image target, ImageStyle style)
+    {
+        if (target == null || !style.IsValid)
+        {
+            return;
+        }
+
+        target.sprite = style.sprite;
+        target.color = style.color;
+        target.type = style.type;
+        target.preserveAspect = style.preserveAspect;
+        target.fillCenter = style.fillCenter;
+        target.pixelsPerUnitMultiplier = style.pixelsPerUnitMultiplier;
+    }
+
+    private struct HealthBarStyle
+    {
+        public ImageStyle frame;
+        public ImageStyle background;
+        public ImageStyle fill;
+
+        public bool IsValid => frame.IsValid || background.IsValid || fill.IsValid;
+    }
+
+    private struct ImageStyle
+    {
+        public Sprite sprite;
+        public Color color;
+        public Image.Type type;
+        public bool preserveAspect;
+        public bool fillCenter;
+        public float pixelsPerUnitMultiplier;
+
+        public bool IsValid => sprite != null;
+
+        public static ImageStyle FromImage(Image image)
+        {
+            if (image == null)
+            {
+                return default;
+            }
+
+            return new ImageStyle
+            {
+                sprite = image.sprite,
+                color = image.color,
+                type = image.type,
+                preserveAspect = image.preserveAspect,
+                fillCenter = image.fillCenter,
+                pixelsPerUnitMultiplier = image.pixelsPerUnitMultiplier
+            };
+        }
+    }
+
+    private static Sprite GetWhiteSprite()
+    {
+        if (whiteSprite != null)
+        {
+            return whiteSprite;
+        }
+
+        Texture2D texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        texture.SetPixel(0, 0, Color.white);
+        texture.Apply();
+        whiteSprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f));
+        whiteSprite.name = "Runtime White Sprite";
+        return whiteSprite;
     }
 
     private void Update()
@@ -304,14 +829,14 @@ public class FusionPlayerAvatar : NetworkBehaviour
         slideQueued = true;
     }
 
-    public bool RequestDamage(int damage, Vector3 attackPosition)
+    public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0)
     {
         if (damage <= 0 || Object == null || !Object.IsValid)
         {
             return false;
         }
 
-        RPC_ApplyDamage(damage, attackPosition);
+        RPC_ApplyDamage(damage, attackPosition, damageSourceId);
         return true;
     }
 
@@ -323,6 +848,16 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
 
         RPC_ApplyPickup((int)pickupType, value);
+    }
+
+    public void RequestReviveTarget(FusionPlayerAvatar target)
+    {
+        if (target == null || !CanReviveOthers)
+        {
+            return;
+        }
+
+        target.RPC_RequestRevive(NetworkPlayerRef);
     }
 
     private void MoveLocalPlayer(float deltaTime)
@@ -617,9 +1152,24 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_ApplyDamage(int damage, Vector3 attackPosition)
+    private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId)
     {
         ResolveReferences();
+
+        double now = Runner != null ? Runner.SimulationTime : Time.timeAsDouble;
+        if (damageSourceId != 0
+            && damageSourceId == lastDamageSourceId
+            && now - lastDamageTime < DuplicateDamageLockSeconds)
+        {
+            Debug.Log(
+                $"FusionPlayerAvatar: ignored duplicate damage from source {damageSourceId} " +
+                $"on '{name}' within {DuplicateDamageLockSeconds:0.00}s."
+            );
+            return;
+        }
+
+        lastDamageSourceId = damageSourceId;
+        lastDamageTime = now;
 
         if (player != null)
         {
@@ -649,6 +1199,62 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         character.ApplyPickupValue((PickUpType)pickupType, value);
         networkHealth?.ForceSyncNow();
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestRevive(PlayerRef reviver)
+    {
+        ResolveReferences();
+
+        if (!CanBeRevived || reviver == PlayerRef.None || Runner == null)
+        {
+            return;
+        }
+
+        if (!Runner.TryGetPlayerObject(reviver, out NetworkObject reviverObject) || reviverObject == null)
+        {
+            return;
+        }
+
+        FusionPlayerAvatar reviverAvatar = reviverObject.GetComponent<FusionPlayerAvatar>();
+        if (reviverAvatar == null
+            || reviverAvatar == this
+            || reviverAvatar.IsDowned
+            || reviverAvatar.IsEliminated
+            || reviverAvatar.IsDead())
+        {
+            return;
+        }
+
+        float allowedDistance = Mathf.Max(0.1f, reviveDistance) + 0.35f;
+        Vector3 offset = reviverAvatar.transform.position - transform.position;
+        offset.y = 0f;
+
+        if (offset.sqrMagnitude > allowedDistance * allowedDistance)
+        {
+            return;
+        }
+
+        int maxHealth = health != null ? Mathf.Max(1, health.maxHealth) : 100;
+        int reviveHealth = Mathf.Clamp(Mathf.RoundToInt(maxHealth * reviveHealthPercent), 1, maxHealth);
+
+        RevivesRemaining = Mathf.Max(RevivesRemaining - 1, 0);
+        IsDowned = false;
+        IsEliminated = false;
+
+        if (health != null)
+        {
+            health.SetHealthFromNetwork(reviveHealth, maxHealth);
+        }
+
+        networkHealth?.ForceSyncNow();
+        RPC_ApplyRevive(reviveHealth);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_ApplyRevive(int reviveHealth)
+    {
+        ApplyNetworkRevive(reviveHealth);
     }
 
     public bool BroadcastSpawnerCleared(int spawnerNetworkId)
@@ -762,10 +1368,56 @@ public class FusionPlayerAvatar : NetworkBehaviour
         hasAppliedNetworkDeath = true;
         StopLocalControlAfterDeath();
 
+        bool canBeRevivedAfterThisDeath = RevivesRemaining > 0 && !IsEliminated;
+
+        if (Object != null && Object.IsValid && Object.HasStateAuthority)
+        {
+            if (canBeRevivedAfterThisDeath)
+            {
+                IsDowned = true;
+                IsEliminated = false;
+            }
+            else
+            {
+                IsDowned = false;
+                IsEliminated = true;
+            }
+        }
+
         Character character = player != null ? player : GetComponent<Character>();
         if (character != null && character.CurrentState != CharacterState.Dead)
         {
+            if (canBeRevivedAfterThisDeath)
+            {
+                character.SuppressNextDeathDissolve();
+            }
+
             character.SwitchToState(CharacterState.Dead, true);
+        }
+    }
+
+    private void ApplyNetworkRevive(int reviveHealth)
+    {
+        ResolveReferences();
+        hasAppliedNetworkDeath = false;
+        lastDamageSourceId = 0;
+        lastDamageTime = -999d;
+        ClearLocalActions();
+        smoothedMoveDirection = Vector3.zero;
+        slideDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        NetworkedSpeed = 0f;
+        NetworkedGrounded = true;
+
+        Character character = player != null ? player : GetComponent<Character>();
+        if (character != null)
+        {
+            character.Revive(reviveHealth);
+        }
+        else if (health != null)
+        {
+            int maxHealth = Mathf.Max(1, health.maxHealth);
+            health.SetHealthFromNetwork(Mathf.Clamp(reviveHealth, 1, maxHealth), maxHealth);
         }
     }
 

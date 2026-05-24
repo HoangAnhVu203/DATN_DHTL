@@ -9,9 +9,8 @@ public class Spawner : MonoBehaviour
     [SerializeField] private int networkId;
     [SerializeField] private Transform spawnPointRoot;
     [SerializeField] private Gate[] gatesToOpen;
-    [SerializeField] private bool snapSpawnPositionToGround = true;
-    [SerializeField] private float groundSnapMaxDistance = 25f;
-    [SerializeField] private float spawnGroundOffset = 0.05f;
+    [SerializeField] private bool projectSpawnPointDownToNavMesh = true;
+    [SerializeField] private float navMeshProjectionDistance = 20f;
 
     private List<SpawnPoint> spawnPointList;
 
@@ -281,47 +280,58 @@ public class Spawner : MonoBehaviour
 
     private Vector3 ResolveSpawnPosition(SpawnPoint point)
     {
-        if (point == null)
+        Vector3 position = point != null ? point.transform.position : transform.position;
+        if (!projectSpawnPointDownToNavMesh)
         {
-            return transform.position;
+            return position;
         }
 
-        Vector3 originalPosition = point.transform.position;
-        if (!snapSpawnPositionToGround)
+        if (TryProjectDownToNavMesh(position, out Vector3 projectedPosition))
         {
-            return originalPosition;
-        }
-
-        float snapDistance = Mathf.Max(0.1f, groundSnapMaxDistance);
-        float offset = Mathf.Max(0f, spawnGroundOffset);
-
-        if (NavMesh.SamplePosition(originalPosition, out NavMeshHit navMeshHit, snapDistance, NavMesh.AllAreas))
-        {
-            Vector3 snappedPosition = navMeshHit.position + Vector3.up * offset;
             Debug.Log(
-                $"Spawner[{NetworkId}] '{name}': snapped spawn point '{point.name}' to NavMesh. " +
-                $"from {originalPosition} to {snappedPosition}."
+                $"Spawner[{NetworkId}] '{name}': projected spawn point '{point?.name}' down to NavMesh. " +
+                $"from {position} to {projectedPosition}."
             );
-            return snappedPosition;
-        }
-
-        Vector3 rayOrigin = originalPosition + Vector3.up * snapDistance;
-        float rayDistance = snapDistance * 2f;
-        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, rayDistance, ~0, QueryTriggerInteraction.Ignore))
-        {
-            Vector3 snappedPosition = hit.point + Vector3.up * offset;
-            Debug.Log(
-                $"Spawner[{NetworkId}] '{name}': snapped spawn point '{point.name}' to collider '{hit.collider.name}'. " +
-                $"from {originalPosition} to {snappedPosition}."
-            );
-            return snappedPosition;
+            return projectedPosition;
         }
 
         Debug.LogWarning(
-            $"Spawner[{NetworkId}] '{name}': could not snap spawn point '{point.name}' to ground. " +
-            $"Using original position {originalPosition}."
+            $"Spawner[{NetworkId}] '{name}': could not project spawn point '{point?.name}' down to NavMesh. " +
+            $"Using original position {position}."
         );
-        return originalPosition;
+        return position;
+    }
+
+    private bool TryProjectDownToNavMesh(Vector3 position, out Vector3 projectedPosition)
+    {
+        float projectionDistance = Mathf.Max(0.1f, navMeshProjectionDistance);
+        Vector3 rayStart = position + Vector3.up * 0.25f;
+
+        if (NavMesh.Raycast(rayStart, rayStart + Vector3.down * projectionDistance, out NavMeshHit rayHit, NavMesh.AllAreas))
+        {
+            projectedPosition = rayHit.position;
+            return true;
+        }
+
+        float sampleRadius = 0.2f;
+        int sampleSteps = Mathf.CeilToInt(projectionDistance / sampleRadius);
+        for (int i = 0; i <= sampleSteps; i++)
+        {
+            Vector3 samplePosition = position + Vector3.down * (i * sampleRadius);
+            if (NavMesh.SamplePosition(samplePosition, out NavMeshHit sampleHit, sampleRadius, NavMesh.AllAreas))
+            {
+                Vector3 hitPosition = sampleHit.position;
+                if (Mathf.Abs(hitPosition.x - position.x) <= sampleRadius * 1.5f
+                    && Mathf.Abs(hitPosition.z - position.z) <= sampleRadius * 1.5f)
+                {
+                    projectedPosition = new Vector3(position.x, hitPosition.y, position.z);
+                    return true;
+                }
+            }
+        }
+
+        projectedPosition = position;
+        return false;
     }
 
     private NetworkRunner FindActiveNetworkRunner()

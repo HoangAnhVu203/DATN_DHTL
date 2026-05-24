@@ -87,7 +87,7 @@ public class DamageCaster : MonoBehaviour
             }
 
             MarkRecentNetworkHit(targetNetworkEnemy);
-            if (targetNetworkEnemy.RequestDamage(damage, attackerPosition))
+            if (targetNetworkEnemy.RequestDamage(damage, attackerPosition, GetDamageSourceId()))
             {
                 PlayHitVFX(other);
                 MarkDamagedTarget(targetNetworkEnemy);
@@ -125,7 +125,7 @@ public class DamageCaster : MonoBehaviour
             }
 
             MarkRecentNetworkHit(targetNetworkPlayer);
-            if (targetNetworkPlayer.RequestDamage(damage, attackerPosition))
+            if (targetNetworkPlayer.RequestDamage(damage, attackerPosition, GetDamageSourceId()))
             {
                 PlayHitVFX(other);
                 MarkDamagedTarget(targetNetworkPlayer);
@@ -203,6 +203,11 @@ public class DamageCaster : MonoBehaviour
         int ownerId = ownerRoot != null ? ownerRoot.GetInstanceID() : transform.root.GetInstanceID();
         int targetId = target.transform.root.GetInstanceID();
         return ((long)ownerId << 32) ^ (uint)targetId;
+    }
+
+    private int GetDamageSourceId()
+    {
+        return ownerRoot != null ? ownerRoot.GetInstanceID() : transform.root.GetInstanceID();
     }
 
     private void ClearDamagedTargets()

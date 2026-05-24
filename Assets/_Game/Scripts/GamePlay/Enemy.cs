@@ -42,7 +42,7 @@ public class Enemy : Character
 
     protected override Vector3 GetMoveDirection()
     {
-        if (target == null || Time.time >= nextTargetRefreshTime)
+        if (!UseExternalMovementTick && (target == null || Time.time >= nextTargetRefreshTime))
         {
             RefreshClosestPlayerTarget();
         }
@@ -118,8 +118,23 @@ public class Enemy : Character
         if (agent != null && agent.isOnNavMesh)
         {
             agent.ResetPath();
+            agent.nextPosition = transform.position;
         }
 
+        lastMoveDirection = Vector3.zero;
+        nextRepathTime = 0f;
+    }
+
+    public void SyncAgentToTransform()
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        agent.Warp(transform.position);
+        agent.ResetPath();
+        agent.nextPosition = transform.position;
         lastMoveDirection = Vector3.zero;
         nextRepathTime = 0f;
     }

@@ -178,6 +178,7 @@ MonoBehaviour:
   playSpawnDissolveOnStart: 0
   spawnDissolveDelay: 0
   itemDrop: {fileID: 0}
+  itemDropHeightOffset: 0.3
   isInvincible: 0
   invincibleDuration: 2
   Coin: 0
@@ -364,6 +365,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FusionPlayerAvatar
   player: {fileID: 5836399115853063092}
+  health: {fileID: 0}
   characterController: {fileID: 8581280618095101652}
   animator: {fileID: 6424311490524860203}
   damageCaster: {fileID: 1431666348503151217}
@@ -382,6 +384,11 @@ MonoBehaviour:
   slideDuration: 0.5
   slideDistance: 3
   setCameraFollowTarget: 1
+  showDisplayName: 1
+  displayNameHeight: 2.25
+  displayNameFontSize: 3
+  displayNameScale: {x: 1, y: 1, z: 1}
+  displayNameColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1001 &32643968517700812
 PrefabInstance:
   m_ObjectHideFlags: 0

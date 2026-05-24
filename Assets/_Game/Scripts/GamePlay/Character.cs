@@ -33,6 +33,7 @@ public abstract class Character : MonoBehaviour
     [SerializeField] private bool playSpawnDissolveOnStart;
     [SerializeField] private float spawnDissolveDelay;
     [SerializeField] private GameObject itemDrop;
+    [SerializeField] private float itemDropHeightOffset = 0.3f;
     [SerializeField] private bool isInvincible;
     [SerializeField] private float invincibleDuration = 2f;
     [SerializeField] private int Coin;
@@ -56,6 +57,9 @@ public abstract class Character : MonoBehaviour
     private Transform targetPlayer;
     private bool isSpawnDissolving;
     private bool hasNotifiedDeath;
+    private bool hasDeathDropPosition;
+    private bool suppressNextDeathDissolve;
+    private Vector3 deathDropPosition;
 
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
@@ -478,6 +482,8 @@ public abstract class Character : MonoBehaviour
 
     protected virtual void OnEnterDead()
     {
+        deathDropPosition = transform.position;
+        hasDeathDropPosition = true;
         smoothedMoveDirection = Vector3.zero;
         verticalVelocity = 0f;
         impactOnCharacter = Vector3.zero;
@@ -486,7 +492,16 @@ public abstract class Character : MonoBehaviour
         SetAnimatorFloat(SpeedParameter, 0f, 0f, Time.deltaTime);
         SetAnimatorTrigger(DeadParameter);
         DisableDamageCaster();
-        StartMaterialDissolve();
+
+        if (suppressNextDeathDissolve)
+        {
+            suppressNextDeathDissolve = false;
+            StopMaterialDissolve();
+        }
+        else
+        {
+            StartMaterialDissolve();
+        }
 
         if (rb != null)
         {
@@ -628,6 +643,36 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    public void SuppressNextDeathDissolve()
+    {
+        suppressNextDeathDissolve = true;
+    }
+
+    public void Revive(int reviveHealth)
+    {
+        StopMaterialDissolve();
+        CancelInvincible();
+        hasNotifiedDeath = false;
+        hasDeathDropPosition = false;
+        smoothedMoveDirection = Vector3.zero;
+        verticalVelocity = 0f;
+        impactOnCharacter = Vector3.zero;
+
+        if (Health != null)
+        {
+            int maxHealth = Mathf.Max(1, Health.maxHealth);
+            Health.SetHealthFromNetwork(Mathf.Clamp(reviveHealth, 1, maxHealth), maxHealth);
+        }
+
+        if (animator != null)
+        {
+            animator.Rebind();
+            animator.Update(0f);
+        }
+
+        SwitchToState(CharacterState.Idle, true);
+    }
+
     private void PlayMaterialsBlink()
     {
         if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
@@ -689,6 +734,26 @@ public abstract class Character : MonoBehaviour
 
         isSpawnDissolving = false;
         dissolveCoroutine = StartCoroutine(MaterialDissolve());
+    }
+
+    private void StopMaterialDissolve()
+    {
+        if (blinkCoroutine != null)
+        {
+            StopCoroutine(blinkCoroutine);
+            blinkCoroutine = null;
+            SetMaterialsBlink(0f);
+        }
+
+        if (dissolveCoroutine != null)
+        {
+            StopCoroutine(dissolveCoroutine);
+            dissolveCoroutine = null;
+        }
+
+        isSpawnDissolving = false;
+        SetMaterialsFloat(EnableDissolvePropertyId, 0f);
+        SetMaterialsFloat(DissolveHeightPropertyId, dissolveStartHeight);
     }
 
     public void PlaySpawnDissolve()
@@ -796,7 +861,8 @@ public abstract class Character : MonoBehaviour
             return;
         }
 
-        Vector3 dropPosition = new Vector3(transform.position.x, 0.3f, transform.position.z);
+        Vector3 dropBasePosition = hasDeathDropPosition ? deathDropPosition : transform.position;
+        Vector3 dropPosition = dropBasePosition + Vector3.up * itemDropHeightOffset;
         FusionEnemyAvatar networkEnemy = GetComponent<FusionEnemyAvatar>();
         if (networkEnemy != null && networkEnemy.Object != null && networkEnemy.Object.IsValid)
         {

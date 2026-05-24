@@ -20,7 +20,6 @@ public class FusionEnemyAvatar : NetworkBehaviour
     [SerializeField] private float proxyAnimationMoveSpeed = 2.5f;
     [SerializeField] private float proxyAnimatorDampTime = 0.08f;
     [SerializeField] private float proxyStopAnimatorDampTime = 0.02f;
-    [SerializeField] private float navMeshSnapDistance = 8f;
     [SerializeField] private float targetPathSampleDistance = 2f;
     [SerializeField] private bool playSpawnDissolveOnAuthority = true;
 
@@ -29,8 +28,13 @@ public class FusionEnemyAvatar : NetworkBehaviour
     private bool spawnDissolvePlayed;
     private bool hasAppliedNetworkDeath;
     private bool hasLastRenderPosition;
+    private bool agentSyncedToSpawn;
     private Vector3 lastRenderPosition;
     private NavMeshPath reusablePath;
+    private int lastDamageSourceId;
+    private double lastDamageTime = -999d;
+
+    private const double DuplicateDamageLockSeconds = 0.3d;
 
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
@@ -87,7 +91,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
             return;
         }
 
-        EnsureAgentOnNavMesh();
+        SyncAgentToSpawnPosition();
         RefreshClosestTarget();
         enemy.TickMovement(Runner.DeltaTime);
     }
@@ -119,25 +123,39 @@ public class FusionEnemyAvatar : NetworkBehaviour
         animator.SetBool(IsGroundedParameter, true);
     }
 
-    public bool RequestDamage(int damage, Vector3 attackPosition)
+    public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0)
     {
         if (damage <= 0 || Object == null || !Object.IsValid)
         {
             return false;
         }
 
-        RPC_ApplyDamage(damage, attackPosition);
+        RPC_ApplyDamage(damage, attackPosition, damageSourceId);
         return true;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_ApplyDamage(int damage, Vector3 attackPosition)
+    private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId)
     {
         if (enemy == null || !Object.HasStateAuthority)
         {
             return;
         }
 
+        double now = Runner != null ? Runner.SimulationTime : Time.timeAsDouble;
+        if (damageSourceId != 0
+            && damageSourceId == lastDamageSourceId
+            && now - lastDamageTime < DuplicateDamageLockSeconds)
+        {
+            Debug.Log(
+                $"FusionEnemyAvatar: ignored duplicate damage from source {damageSourceId} " +
+                $"on '{name}' within {DuplicateDamageLockSeconds:0.00}s."
+            );
+            return;
+        }
+
+        lastDamageSourceId = damageSourceId;
+        lastDamageTime = now;
         enemy.ApplyDamage(damage, attackPosition);
         networkHealth?.ForceSyncNow();
     }
@@ -174,7 +192,8 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
             if (hasStateAuthority)
             {
-                EnsureAgentOnNavMesh();
+                agentSyncedToSpawn = false;
+                SyncAgentToSpawnPosition();
                 ForceRefreshClosestTarget();
             }
         }
@@ -218,36 +237,29 @@ public class FusionEnemyAvatar : NetworkBehaviour
         enemy.SetTarget(FindClosestPlayer());
     }
 
-    private void EnsureAgentOnNavMesh()
+    private void SyncAgentToSpawnPosition()
     {
-        if (navMeshAgent == null || !navMeshAgent.enabled || navMeshAgent.isOnNavMesh)
+        if (agentSyncedToSpawn || navMeshAgent == null || !navMeshAgent.enabled)
         {
             return;
         }
 
-        float sampleDistance = Mathf.Max(0.1f, navMeshSnapDistance);
-        if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
+        if (!navMeshAgent.isOnNavMesh)
         {
-            Debug.LogWarning($"FusionEnemyAvatar: '{name}' is not on NavMesh and no nearby NavMesh was found at {transform.position}.");
+            Debug.LogWarning(
+                $"FusionEnemyAvatar: '{name}' spawned at {transform.position} but NavMeshAgent is not on NavMesh. " +
+                "Move this SpawnPoint onto the baked NavMesh."
+            );
             return;
         }
 
-        bool controllerWasEnabled = characterController != null && characterController.enabled;
-        if (characterController != null)
-        {
-            characterController.enabled = false;
-        }
-
-        transform.position = hit.position;
-        navMeshAgent.Warp(hit.position);
+        navMeshAgent.Warp(transform.position);
         navMeshAgent.ResetPath();
+        navMeshAgent.nextPosition = transform.position;
+        enemy?.SyncAgentToTransform();
+        agentSyncedToSpawn = true;
 
-        if (characterController != null)
-        {
-            characterController.enabled = controllerWasEnabled;
-        }
-
-        Debug.Log($"FusionEnemyAvatar: snapped '{name}' onto NavMesh at {hit.position}.");
+        Debug.Log($"FusionEnemyAvatar: synced '{name}' NavMeshAgent to spawn position {transform.position}.");
     }
 
     private void ResolveReferences()

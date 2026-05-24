@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 #endif
 using UnityEngine.UI;
@@ -13,15 +14,23 @@ public class PanelGamePlay : UICanvas
 
     [SerializeField] private Button attackButton;
     [SerializeField] private Button slideButton;
+    [SerializeField] private Button reviveButton;
+    [SerializeField] private Image reviveProgressImage;
+    [SerializeField] private TMP_Text reviveButtonText;
     [SerializeField] private Slider healthSlider;
     [SerializeField] private TMP_Text coinText;
+    [SerializeField] private float reviveHoldDuration = 3f;
 
     private Player player;
     private FusionPlayerAvatar fusionPlayerAvatar;
+    private FusionPlayerAvatar currentReviveTarget;
     private Health playerHealth;
     private Player subscribedPlayer;
     private Health subscribedPlayerHealth;
     private float nextPlayerSearchTime;
+    private float reviveHoldTimer;
+    private bool reviveButtonHeld;
+    private bool reviveRequestSent;
 
     private void OnEnable()
     {
@@ -36,6 +45,11 @@ public class PanelGamePlay : UICanvas
         if (slideButton == null)
         {
             slideButton = FindButtonByName("Skill2 - Slide");
+        }
+
+        if (reviveButton == null)
+        {
+            reviveButton = FindButtonByName("ReviveBtn") ?? FindButtonByName("ReviveButton");
         }
 
         CachePlayer();
@@ -53,6 +67,9 @@ public class PanelGamePlay : UICanvas
             slideButton.onClick.RemoveListener(OnSlideButtonClicked);
             slideButton.onClick.AddListener(OnSlideButtonClicked);
         }
+
+        BindReviveButtonEvents();
+        SetReviveButtonVisible(false);
     }
 
     private void OnDisable()
@@ -68,22 +85,25 @@ public class PanelGamePlay : UICanvas
         {
             slideButton.onClick.RemoveListener(OnSlideButtonClicked);
         }
+
+        reviveButtonHeld = false;
+        reviveRequestSent = false;
     }
 
     private void Update()
     {
-        if (Time.unscaledTime < nextPlayerSearchTime)
-        {
-            return;
-        }
+        UpdateReviveButton(Time.unscaledDeltaTime);
 
-        nextPlayerSearchTime = Time.unscaledTime + PlayerSearchInterval;
-
-        if (playerHealth == null || subscribedPlayerHealth == null || fusionPlayerAvatar == null)
+        if (Time.unscaledTime >= nextPlayerSearchTime)
         {
-            CachePlayer();
-            SubscribePlayerStats();
-            RefreshPlayerStats();
+            nextPlayerSearchTime = Time.unscaledTime + PlayerSearchInterval;
+
+            if (playerHealth == null || subscribedPlayerHealth == null || fusionPlayerAvatar == null)
+            {
+                CachePlayer();
+                SubscribePlayerStats();
+                RefreshPlayerStats();
+            }
         }
     }
 
@@ -169,6 +189,32 @@ public class PanelGamePlay : UICanvas
             coinText = coinTextObject != null
                 ? coinTextObject.GetComponent<TMP_Text>()
                 : GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (reviveButton == null)
+        {
+            reviveButton = FindButtonByName("ReviveBtn") ?? FindButtonByName("ReviveButton");
+        }
+
+        if (reviveButton != null)
+        {
+            if (reviveProgressImage == null)
+            {
+                Image[] images = reviveButton.GetComponentsInChildren<Image>(true);
+                foreach (Image image in images)
+                {
+                    if (image != null && image.type == Image.Type.Filled)
+                    {
+                        reviveProgressImage = image;
+                        break;
+                    }
+                }
+            }
+
+            if (reviveButtonText == null)
+            {
+                reviveButtonText = reviveButton.GetComponentInChildren<TMP_Text>(true);
+            }
         }
     }
 
@@ -339,6 +385,184 @@ public class PanelGamePlay : UICanvas
         if (coinText != null)
         {
             coinText.text = coin.ToString();
+        }
+    }
+
+    private void BindReviveButtonEvents()
+    {
+        if (reviveButton == null)
+        {
+            return;
+        }
+
+        EventTrigger trigger = reviveButton.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = reviveButton.gameObject.AddComponent<EventTrigger>();
+        }
+
+        trigger.triggers.Clear();
+
+        EventTrigger.Entry pointerDown = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerDown
+        };
+        pointerDown.callback.AddListener(_ => OnRevivePointerDown());
+        trigger.triggers.Add(pointerDown);
+
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerUp
+        };
+        pointerUp.callback.AddListener(_ => OnRevivePointerUp());
+        trigger.triggers.Add(pointerUp);
+
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry
+        {
+            eventID = EventTriggerType.PointerExit
+        };
+        pointerExit.callback.AddListener(_ => OnRevivePointerUp());
+        trigger.triggers.Add(pointerExit);
+    }
+
+    private void OnRevivePointerDown()
+    {
+        reviveButtonHeld = true;
+    }
+
+    private void OnRevivePointerUp()
+    {
+        reviveButtonHeld = false;
+    }
+
+    private void UpdateReviveButton(float deltaTime)
+    {
+        if (fusionPlayerAvatar == null)
+        {
+            CachePlayer();
+        }
+
+        FusionPlayerAvatar reviveTarget = FindNearestReviveTarget();
+        bool canShowRevive = reviveTarget != null;
+        SetReviveButtonVisible(canShowRevive);
+
+        if (!canShowRevive)
+        {
+            currentReviveTarget = null;
+            ResetReviveHold();
+            return;
+        }
+
+        if (currentReviveTarget != reviveTarget)
+        {
+            currentReviveTarget = reviveTarget;
+            ResetReviveHold();
+        }
+
+        bool isHolding = reviveButtonHeld || IsReviveKeyboardHeld();
+        if (!isHolding)
+        {
+            reviveRequestSent = false;
+            reviveHoldTimer = 0f;
+            SetReviveProgress(0f);
+            return;
+        }
+
+        if (reviveRequestSent)
+        {
+            SetReviveProgress(1f);
+            return;
+        }
+
+        float safeDuration = Mathf.Max(0.1f, reviveHoldDuration);
+        reviveHoldTimer = Mathf.Min(reviveHoldTimer + deltaTime, safeDuration);
+        float progress = Mathf.Clamp01(reviveHoldTimer / safeDuration);
+        SetReviveProgress(progress);
+
+        if (progress < 1f)
+        {
+            return;
+        }
+
+        reviveRequestSent = true;
+        fusionPlayerAvatar.RequestReviveTarget(currentReviveTarget);
+    }
+
+    private FusionPlayerAvatar FindNearestReviveTarget()
+    {
+        if (fusionPlayerAvatar == null || !fusionPlayerAvatar.CanReviveOthers)
+        {
+            return null;
+        }
+
+        FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
+        FusionPlayerAvatar closest = null;
+        float reviveDistance = Mathf.Max(0.1f, fusionPlayerAvatar.ReviveDistance);
+        float closestSqrDistance = reviveDistance * reviveDistance;
+
+        foreach (FusionPlayerAvatar avatar in avatars)
+        {
+            if (avatar == null || avatar == fusionPlayerAvatar || !avatar.CanBeRevived)
+            {
+                continue;
+            }
+
+            float sqrDistance = (avatar.transform.position - fusionPlayerAvatar.transform.position).sqrMagnitude;
+            if (sqrDistance > closestSqrDistance)
+            {
+                continue;
+            }
+
+            closestSqrDistance = sqrDistance;
+            closest = avatar;
+        }
+
+        return closest;
+    }
+
+    private bool IsReviveKeyboardHeld()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.eKey.isPressed;
+#else
+        return Input.GetKey(KeyCode.E);
+#endif
+    }
+
+    private void ResetReviveHold()
+    {
+        reviveHoldTimer = 0f;
+        reviveRequestSent = false;
+        SetReviveProgress(0f);
+    }
+
+    private void SetReviveButtonVisible(bool visible)
+    {
+        if (reviveButton != null && reviveButton.gameObject.activeSelf != visible)
+        {
+            reviveButton.gameObject.SetActive(visible);
+        }
+
+        if (!visible)
+        {
+            reviveButtonHeld = false;
+        }
+    }
+
+    private void SetReviveProgress(float progress)
+    {
+        progress = Mathf.Clamp01(progress);
+
+        if (reviveProgressImage != null)
+        {
+            reviveProgressImage.fillAmount = progress;
+        }
+
+        if (reviveButtonText != null)
+        {
+            reviveButtonText.text = progress > 0f
+                ? $"Revive {Mathf.RoundToInt(progress * 100f)}%"
+                : "Revive";
         }
     }
 
