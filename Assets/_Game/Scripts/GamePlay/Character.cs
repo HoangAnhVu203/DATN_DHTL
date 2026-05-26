@@ -42,6 +42,7 @@ public abstract class Character : MonoBehaviour
     private CharacterController characterController;
     private Health Health;
     private DamageCaster damageCaster;
+    private DropWeapons dropWeapons;
     private Rigidbody rb;
     private Animator animator;
     private Vector3 smoothedMoveDirection;
@@ -78,6 +79,7 @@ public abstract class Character : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         Health = GetComponent<Health>();
         damageCaster = GetComponentInChildren<DamageCaster>();
+        dropWeapons = GetComponent<DropWeapons>();
         skinnedMeshRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
         materialPropertyBlock = new MaterialPropertyBlock();
         Rigidbody attachedRigidbody = GetComponent<Rigidbody>();
@@ -670,6 +672,7 @@ public abstract class Character : MonoBehaviour
             animator.Update(0f);
         }
 
+        dropWeapons?.PickUpWeapons();
         SwitchToState(CharacterState.Idle, true);
     }
 

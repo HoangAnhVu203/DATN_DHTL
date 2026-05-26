@@ -106,6 +106,18 @@ public class FusionPlayerAvatar : NetworkBehaviour
     public float ReviveDistance => reviveDistance;
     public bool CanBeRevived => IsDowned && !IsEliminated && RevivesRemaining > 0;
     public bool CanReviveOthers => HasLocalControl() && !IsDowned && !IsEliminated && !IsDead();
+    public bool IsUnableToContinueMatch
+    {
+        get
+        {
+            if (IsDowned || IsEliminated || IsDead())
+            {
+                return true;
+            }
+
+            return networkHealth != null && networkHealth.MaxHealth > 0 && networkHealth.CurrentHealth <= 0;
+        }
+    }
     public PlayerRef NetworkPlayerRef
     {
         get
@@ -860,6 +872,22 @@ public class FusionPlayerAvatar : NetworkBehaviour
         target.RPC_RequestRevive(NetworkPlayerRef);
     }
 
+    public bool BroadcastMatchResult(GameState resultState)
+    {
+        if (resultState != GameState.Victory && resultState != GameState.Lose)
+        {
+            return false;
+        }
+
+        if (Object == null || !Object.IsValid)
+        {
+            return false;
+        }
+
+        RPC_ApplyMatchResult((int)resultState);
+        return true;
+    }
+
     private void MoveLocalPlayer(float deltaTime)
     {
         if (deltaTime <= 0f)
@@ -1322,6 +1350,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private void RPC_CollectLocalPickup(int pickupNetworkId, Vector3 collectPosition)
     {
         PickUp.CollectLocalPickupForNetworkId(pickupNetworkId, collectPosition);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    private void RPC_ApplyMatchResult(int resultStateValue)
+    {
+        GameState resultState = (GameState)resultStateValue;
+        NetworkMatchManager.Ensure().ApplyNetworkResult(resultState);
     }
 
     private void SubscribeHealth()

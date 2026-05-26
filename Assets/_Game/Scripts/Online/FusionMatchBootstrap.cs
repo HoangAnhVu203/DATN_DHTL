@@ -90,6 +90,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
 
         OnlineMatchLoadingOverlay.SetProgress(0.8f);
         Debug.Log($"FusionMatchBootstrap: joined Photon Fusion session '{sessionName}'.");
+        NetworkMatchManager.Ensure().ResetMatchState();
         SpawnLocalPlayerIfNeeded(runner.LocalPlayer);
     }
 

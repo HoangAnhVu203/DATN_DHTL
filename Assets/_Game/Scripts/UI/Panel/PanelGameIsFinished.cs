@@ -1,16 +1,75 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PanelGameIsFinished : UICanvas
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [SerializeField] private Button returnRoomButton;
+    [SerializeField] private Button restartButton;
+
+    public override void SetUp()
     {
-        
+        base.SetUp();
+        ResolveReferences();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnDestroy()
     {
-        
+        RemoveListeners();
+    }
+
+    private void ResolveReferences()
+    {
+        if (returnRoomButton == null)
+        {
+            returnRoomButton = FindButton("Button_MainMenu");
+        }
+
+        if (restartButton == null)
+        {
+            restartButton = FindButton("Button_Restart");
+        }
+
+        RemoveListeners();
+
+        if (returnRoomButton != null)
+        {
+            returnRoomButton.onClick.AddListener(ReturnToRoom);
+        }
+
+        if (restartButton != null)
+        {
+            restartButton.onClick.AddListener(ReturnToRoom);
+        }
+    }
+
+    private void RemoveListeners()
+    {
+        if (returnRoomButton != null)
+        {
+            returnRoomButton.onClick.RemoveListener(ReturnToRoom);
+        }
+
+        if (restartButton != null)
+        {
+            restartButton.onClick.RemoveListener(ReturnToRoom);
+        }
+    }
+
+    private Button FindButton(string buttonName)
+    {
+        foreach (Button button in GetComponentsInChildren<Button>(true))
+        {
+            if (button != null && button.name == buttonName)
+            {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    private void ReturnToRoom()
+    {
+        ReturnToRoomAfterMatch.StartReturn();
     }
 }

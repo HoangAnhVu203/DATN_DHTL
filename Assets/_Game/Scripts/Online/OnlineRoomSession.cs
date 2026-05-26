@@ -11,6 +11,7 @@ public static class OnlineRoomSession
     public static string MatchStatus;
     public static int MatchSeed;
     public static string MatchStartedAt;
+    public static string LastCompletedMatchId;
     public static int ExpectedMatchPlayerCount;
     public static List<RoomService.RoomPlayerData> Players = new List<RoomService.RoomPlayerData>();
 
@@ -45,6 +46,20 @@ public static class OnlineRoomSession
         ExpectedMatchPlayerCount = Players != null && Players.Count > 0 ? Players.Count : 0;
     }
 
+    public static void MarkCurrentMatchCompleted()
+    {
+        LastCompletedMatchId = MatchId;
+    }
+
+    public static void ClearMatch()
+    {
+        MatchId = null;
+        MatchStatus = null;
+        MatchSeed = 0;
+        MatchStartedAt = null;
+        ExpectedMatchPlayerCount = 0;
+    }
+
     public static void Clear()
     {
         RoomId = null;
@@ -56,6 +71,7 @@ public static class OnlineRoomSession
         MatchStatus = null;
         MatchSeed = 0;
         MatchStartedAt = null;
+        LastCompletedMatchId = null;
         ExpectedMatchPlayerCount = 0;
         Players.Clear();
     }

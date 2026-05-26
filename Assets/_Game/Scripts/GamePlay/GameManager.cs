@@ -173,10 +173,20 @@ public class GameManager : MonoBehaviour
                 break;
 
             case GameState.EndMatch:
+                Time.timeScale = 0f;
+                CloseGameplayUI();
+                break;
+
             case GameState.Victory:
+                Time.timeScale = 0f;
+                CloseGameplayUI();
+                OpenGameIsFinishedUI();
+                break;
+
             case GameState.Lose:
                 Time.timeScale = 0f;
                 CloseGameplayUI();
+                OpenGameOverUI();
                 break;
         }
     }
@@ -283,6 +293,11 @@ public class GameManager : MonoBehaviour
 
     private void OnPlayerDied(Character deadCharacter)
     {
+        if (NetworkMatchManager.IsOnlineMatchActive())
+        {
+            return;
+        }
+
         if (delayedLoseCoroutine != null || hasFinishedMatch)
         {
             return;
@@ -315,6 +330,11 @@ public class GameManager : MonoBehaviour
 
     private void OnSpawnerCleared(Spawner clearedSpawner)
     {
+        if (NetworkMatchManager.IsOnlineMatchActive())
+        {
+            return;
+        }
+
         if (spawners == null || spawners.Length == 0)
         {
             return;
@@ -349,5 +369,27 @@ public class GameManager : MonoBehaviour
         }
 
         UIManager.Instance.CloseUIDirectly<PanelGamePlay>();
+    }
+
+    private void OpenGameIsFinishedUI()
+    {
+        if (UIManager.Instance == null)
+        {
+            return;
+        }
+
+        UIManager.Instance.CloseUIDirectly<PanelGameOver>();
+        UIManager.Instance.OpenUI<PanelGameIsFinished>();
+    }
+
+    private void OpenGameOverUI()
+    {
+        if (UIManager.Instance == null)
+        {
+            return;
+        }
+
+        UIManager.Instance.CloseUIDirectly<PanelGameIsFinished>();
+        UIManager.Instance.OpenUI<PanelGameOver>();
     }
 }

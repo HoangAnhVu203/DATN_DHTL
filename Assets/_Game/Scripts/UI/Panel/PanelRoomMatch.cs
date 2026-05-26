@@ -30,8 +30,10 @@ public class PanelRoomMatch : UICanvas
     {
         roomService = service;
         OnlineRoomSession.SetRoom(room);
+        ResetRuntimeState();
         ResolveReferences();
         ResolveLocalAvatarSprites();
+        SetButtonsInteractable(true);
         RefreshRoomCodeText();
         RefreshActionButton();
         RefreshPlayers();
@@ -43,6 +45,7 @@ public class PanelRoomMatch : UICanvas
         base.Open();
         ResolveReferences();
         ResolveLocalAvatarSprites();
+        SetButtonsInteractable(true);
         RefreshRoomCodeText();
         RefreshActionButton();
 
@@ -143,6 +146,16 @@ public class PanelRoomMatch : UICanvas
             actionButton.onClick.RemoveListener(OnActionButtonClicked);
             actionButton.onClick.AddListener(OnActionButtonClicked);
         }
+    }
+
+    private void ResetRuntimeState()
+    {
+        StopRefreshing();
+        localPlayerReady = false;
+        actionInProgress = false;
+        matchCheckInProgress = false;
+        isLoadingMatchScene = false;
+        roomRefreshInProgress = false;
     }
 
     private void StartRefreshing()
@@ -307,6 +320,12 @@ public class PanelRoomMatch : UICanvas
         }
 
         if (data == null || string.IsNullOrWhiteSpace(data.match_id))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(OnlineRoomSession.LastCompletedMatchId)
+            && data.match_id == OnlineRoomSession.LastCompletedMatchId)
         {
             return;
         }
