@@ -7,6 +7,10 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
     private const string HomeSceneName = "HomeScene";
 
     private bool isReturning;
+    private string returningRoomId;
+    private string returningMatchId;
+    private string returningResult;
+    private bool returningPlayerWasHost;
 
     public static void StartReturn()
     {
@@ -37,6 +41,11 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
     {
         Time.timeScale = 1f;
 
+        returningRoomId = OnlineRoomSession.RoomId;
+        returningMatchId = OnlineRoomSession.MatchId;
+        returningResult = ResolveMatchResult();
+        returningPlayerWasHost = OnlineRoomSession.IsHost;
+
         OnlineRoomSession.MarkCurrentMatchCompleted();
         OnlineRoomSession.ClearMatch();
 
@@ -47,14 +56,14 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         }
 
         yield return null;
-        yield return ResetLocalReadyState();
+        yield return ResetRoomStateAfterMatch();
         OpenRoomPanel();
         Destroy(gameObject);
     }
 
-    private IEnumerator ResetLocalReadyState()
+    private IEnumerator ResetRoomStateAfterMatch()
     {
-        if (!OnlineRoomSession.IsInRoom)
+        if (string.IsNullOrWhiteSpace(returningRoomId))
         {
             yield break;
         }
@@ -69,7 +78,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         bool requestSuccess = false;
         string requestError = null;
 
-        yield return roomService.SetReady(OnlineRoomSession.RoomId, false, (success, data, error) =>
+        yield return roomService.ResetRoomAfterMatch(returningRoomId, returningMatchId, returningResult, returningPlayerWasHost, (success, error) =>
         {
             requestFinished = true;
             requestSuccess = success;
@@ -78,7 +87,42 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
 
         if (!requestFinished || !requestSuccess)
         {
-            Debug.LogWarning($"ReturnToRoomAfterMatch: failed to reset ready state. {requestError}");
+            Debug.LogWarning($"ReturnToRoomAfterMatch: reset room after match had errors. {requestError}");
+        }
+        else
+        {
+            OnlineRoomSession.Status = "waiting";
+        }
+
+        if (!requestSuccess)
+        {
+            bool localReadyReset = false;
+            yield return roomService.ForceResetLocalReady(returningRoomId, (success, error) =>
+            {
+                localReadyReset = success;
+                requestError = error;
+            });
+
+            if (!localReadyReset)
+            {
+                Debug.LogWarning($"ReturnToRoomAfterMatch: failed to force reset local ready. {requestError}");
+            }
+        }
+
+        if (OnlineRoomSession.Players != null)
+        {
+            foreach (RoomService.RoomPlayerData player in OnlineRoomSession.Players)
+            {
+                if (player == null)
+                {
+                    continue;
+                }
+
+                if (requestSuccess || returningPlayerWasHost || player.user_id == SupabaseSession.UserId)
+                {
+                    player.is_ready = false;
+                }
+            }
         }
     }
 
@@ -105,6 +149,24 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         }
 
         panel.SetRoom(roomService, BuildCurrentRoomData());
+    }
+
+    private string ResolveMatchResult()
+    {
+        if (GameManager.Instance != null)
+        {
+            if (GameManager.Instance.CurrentState == GameState.Victory)
+            {
+                return "win";
+            }
+
+            if (GameManager.Instance.CurrentState == GameState.Lose)
+            {
+                return "lose";
+            }
+        }
+
+        return "finished";
     }
 
     private PanelRoomMatch OpenRoomMatchPanel()

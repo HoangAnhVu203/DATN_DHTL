@@ -102,6 +102,21 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    public IEnumerator EndMatch(string matchId, string result, Action<bool, MatchData, string> callback)
+    {
+        string jsonBody = JsonUtility.ToJson(new EndMatchRequest
+        {
+            match_id = matchId,
+            result = result,
+            players = BuildEndMatchPlayers(result)
+        });
+
+        yield return InvokeFunction<MatchResponse>("end_match", jsonBody, (success, response, error) =>
+        {
+            callback?.Invoke(success && response != null && response.success, response?.data, error ?? response?.error?.message);
+        });
+    }
+
     public IEnumerator GetActiveMatch(string roomId, Action<bool, MatchData, string> callback)
     {
         if (!EnsureReady(callback))
@@ -123,6 +138,122 @@ public class RoomService : MonoBehaviour
             MatchData[] matches = FromJsonArray<MatchData>(response);
             callback?.Invoke(true, matches.Length > 0 ? matches[0] : null, null);
         });
+    }
+
+    public IEnumerator ResetRoomAfterMatch(string roomId, string matchId, string result, bool resetAllPlayersReady, Action<bool, string> callback)
+    {
+        if (!EnsureReady(callback))
+        {
+            yield break;
+        }
+
+        bool allSucceeded = true;
+        StringBuilder errorBuilder = new StringBuilder();
+
+        if (!string.IsNullOrWhiteSpace(matchId))
+        {
+            bool endMatchCompleted = false;
+            bool endMatchSucceeded = false;
+            string endMatchError = null;
+
+            yield return EndMatch(matchId, result, (success, data, error) =>
+            {
+                endMatchCompleted = true;
+                endMatchSucceeded = success;
+                endMatchError = error;
+            });
+
+            if (endMatchCompleted && endMatchSucceeded)
+            {
+                OnlineRoomSession.Status = "waiting";
+                callback?.Invoke(true, null);
+                yield break;
+            }
+
+            AppendError(errorBuilder, $"end_match failed: {endMatchError}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(matchId))
+        {
+            string escapedMatchId = Uri.EscapeDataString(matchId);
+            string matchUrl = $"{config.SupabaseUrl}/rest/v1/matches?id=eq.{escapedMatchId}";
+
+            yield return PatchRest(matchUrl, "{\"status\":\"ended\"}", (success, error) =>
+            {
+                if (!success)
+                {
+                    allSucceeded = false;
+                    AppendError(errorBuilder, $"finish match failed: {error}");
+                }
+            });
+        }
+
+        if (resetAllPlayersReady)
+        {
+            string escapedRoomId = Uri.EscapeDataString(roomId);
+            string allRoomPlayersUrl = $"{config.SupabaseUrl}/rest/v1/room_players?room_id=eq.{escapedRoomId}";
+
+            yield return PatchRest(allRoomPlayersUrl, "{\"is_ready\":false}", (success, error) =>
+            {
+                if (!success)
+                {
+                    allSucceeded = false;
+                    AppendError(errorBuilder, $"reset all ready failed: {error}");
+                }
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            string escapedRoomId = Uri.EscapeDataString(roomId);
+            string escapedUserId = Uri.EscapeDataString(SupabaseSession.UserId);
+            string localRoomPlayerUrl = $"{config.SupabaseUrl}/rest/v1/room_players?room_id=eq.{escapedRoomId}&user_id=eq.{escapedUserId}";
+
+            yield return PatchRest(localRoomPlayerUrl, "{\"is_ready\":false}", (success, error) =>
+            {
+                if (!success)
+                {
+                    allSucceeded = false;
+                    AppendError(errorBuilder, $"reset local ready failed: {error}");
+                }
+            });
+        }
+
+        if (OnlineRoomSession.IsHost)
+        {
+            string escapedRoomId = Uri.EscapeDataString(roomId);
+            string roomUrl = $"{config.SupabaseUrl}/rest/v1/rooms?id=eq.{escapedRoomId}";
+
+            yield return PatchRest(roomUrl, "{\"status\":\"waiting\"}", (success, error) =>
+            {
+                if (!success)
+                {
+                    allSucceeded = false;
+                    AppendError(errorBuilder, $"reset room status failed: {error}");
+                }
+            });
+        }
+
+        callback?.Invoke(allSucceeded, errorBuilder.ToString());
+    }
+
+    public IEnumerator ForceResetLocalReady(string roomId, Action<bool, string> callback)
+    {
+        if (!EnsureReady(callback))
+        {
+            yield break;
+        }
+
+        if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            callback?.Invoke(false, "Missing room id or user id.");
+            yield break;
+        }
+
+        string escapedRoomId = Uri.EscapeDataString(roomId);
+        string escapedUserId = Uri.EscapeDataString(SupabaseSession.UserId);
+        string url = $"{config.SupabaseUrl}/rest/v1/room_players?room_id=eq.{escapedRoomId}&user_id=eq.{escapedUserId}";
+
+        yield return PatchRest(url, "{\"is_ready\":false}", callback);
     }
 
     public IEnumerator GetRoomPlayers(string roomId, Action<bool, List<RoomPlayerData>, string> callback)
@@ -269,6 +400,33 @@ public class RoomService : MonoBehaviour
         callback?.Invoke(true, responseText, null);
     }
 
+    private IEnumerator PatchRest(string url, string jsonBody, Action<bool, string> callback)
+    {
+        using UnityWebRequest request = new UnityWebRequest(url, "PATCH");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.timeout = 10;
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("Accept", "application/json");
+        request.SetRequestHeader("Prefer", "return=minimal");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+
+        if (request.responseCode < 200 || request.responseCode >= 300 || request.result != UnityWebRequest.Result.Success)
+        {
+            callback?.Invoke(false, BuildErrorMessage(request.responseCode, request.error, responseText));
+            yield break;
+        }
+
+        callback?.Invoke(true, null);
+    }
+
     private bool EnsureReady<T>(Action<bool, T, string> callback)
     {
         if (config == null)
@@ -303,6 +461,23 @@ public class RoomService : MonoBehaviour
         return true;
     }
 
+    private bool EnsureReady(Action<bool, string> callback)
+    {
+        if (config == null)
+        {
+            callback?.Invoke(false, "Supabase config is not assigned.");
+            return false;
+        }
+
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            callback?.Invoke(false, "Ban chua dang nhap.");
+            return false;
+        }
+
+        return true;
+    }
+
     private string BuildErrorMessage(long statusCode, string requestError, string responseText)
     {
         if (!string.IsNullOrWhiteSpace(responseText))
@@ -316,6 +491,21 @@ public class RoomService : MonoBehaviour
         }
 
         return $"HTTP {statusCode}: Supabase request failed.";
+    }
+
+    private void AppendError(StringBuilder builder, string error)
+    {
+        if (string.IsNullOrWhiteSpace(error))
+        {
+            return;
+        }
+
+        if (builder.Length > 0)
+        {
+            builder.Append(" | ");
+        }
+
+        builder.Append(error);
     }
 
     private string BuildInFilter(RoomMembership[] memberships)
@@ -344,6 +534,53 @@ public class RoomService : MonoBehaviour
 
         JsonArrayWrapper<T> wrapper = JsonUtility.FromJson<JsonArrayWrapper<T>>($"{{\"items\":{json}}}");
         return wrapper?.items ?? Array.Empty<T>();
+    }
+
+    private EndMatchPlayerData[] BuildEndMatchPlayers(string result)
+    {
+        bool isWin = string.Equals(result, "win", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(result, "victory", StringComparison.OrdinalIgnoreCase);
+
+        List<EndMatchPlayerData> players = new List<EndMatchPlayerData>();
+        if (OnlineRoomSession.Players != null)
+        {
+            foreach (RoomPlayerData player in OnlineRoomSession.Players)
+            {
+                if (player == null || string.IsNullOrWhiteSpace(player.user_id))
+                {
+                    continue;
+                }
+
+                players.Add(new EndMatchPlayerData
+                {
+                    user_id = player.user_id,
+                    survive_time_sec = 0,
+                    kills = 0,
+                    downs = 0,
+                    revives = 0,
+                    damage_dealt = 0,
+                    is_dead = !isWin,
+                    is_win = isWin
+                });
+            }
+        }
+
+        if (players.Count == 0 && !string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            players.Add(new EndMatchPlayerData
+            {
+                user_id = SupabaseSession.UserId,
+                survive_time_sec = 0,
+                kills = 0,
+                downs = 0,
+                revives = 0,
+                damage_dealt = 0,
+                is_dead = !isWin,
+                is_win = isWin
+            });
+        }
+
+        return players.ToArray();
     }
 
     [Serializable]
@@ -376,6 +613,27 @@ public class RoomService : MonoBehaviour
     {
         public string room_id;
         public int timeout_seconds;
+    }
+
+    [Serializable]
+    private class EndMatchRequest
+    {
+        public string match_id;
+        public string result;
+        public EndMatchPlayerData[] players;
+    }
+
+    [Serializable]
+    private class EndMatchPlayerData
+    {
+        public string user_id;
+        public int survive_time_sec;
+        public int kills;
+        public int downs;
+        public int revives;
+        public int damage_dealt;
+        public bool is_dead;
+        public bool is_win;
     }
 
     [Serializable]
