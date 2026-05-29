@@ -1,6 +1,7 @@
 using Fusion;
 using TMPro;
 using Unity.Cinemachine;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
@@ -61,6 +62,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     [Networked] private float NetworkedSpeed { get; set; }
     [Networked] private NetworkBool NetworkedGrounded { get; set; }
     [Networked, Capacity(32)] private NetworkString<_32> NetworkedDisplayName { get; set; }
+    [Networked, Capacity(64)] private NetworkString<_64> NetworkedUserId { get; set; }
     [Networked] public int RevivesRemaining { get; private set; }
     [Networked] public NetworkBool IsDowned { get; private set; }
     [Networked] public NetworkBool IsEliminated { get; private set; }
@@ -103,6 +105,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     public bool CanApplyDamageLocally => HasLocalControl();
     public bool IsLocalPlayerAvatar => HasLocalControl();
+    public string UserId => NetworkedUserId.ToString();
     public float ReviveDistance => reviveDistance;
     public bool CanBeRevived => IsDowned && !IsEliminated && RevivesRemaining > 0;
     public bool CanReviveOthers => HasLocalControl() && !IsDowned && !IsEliminated && !IsDead();
@@ -151,7 +154,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         SubscribeHealth();
         InitializeReviveState();
         ApplyAuthorityState();
-        SetLocalDisplayNameIfNeeded();
+        SetLocalIdentityIfNeeded();
         RefreshDisplayNameView();
     }
 
@@ -174,6 +177,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         {
             InitializeReviveState();
             ApplyAuthorityState();
+            SetLocalIdentityIfNeeded();
         }
     }
 
@@ -312,11 +316,17 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
-    private void SetLocalDisplayNameIfNeeded()
+    private void SetLocalIdentityIfNeeded()
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
         {
             return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            NetworkedUserId = SupabaseSession.UserId.Trim();
+            OnlineMatchStats.EnsureStarted();
         }
 
         string displayName = GetLocalDisplayName();
@@ -888,6 +898,76 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    public static bool BroadcastMatchStatEvent(OnlineMatchStats.StatEventType eventType, string userId, int amount = 1)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
+        foreach (FusionPlayerAvatar avatar in avatars)
+        {
+            if (avatar == null || !avatar.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (avatar.BroadcastMatchStat(eventType, userId, amount))
+            {
+                return true;
+            }
+        }
+
+        OnlineMatchStats.ApplyNetworkEvent(eventType, userId, amount);
+        return false;
+    }
+
+    public static string GetUserIdForPlayerRef(NetworkRunner runner, PlayerRef playerRef)
+    {
+        if (runner != null
+            && playerRef != PlayerRef.None
+            && runner.TryGetPlayerObject(playerRef, out NetworkObject playerObject)
+            && playerObject != null)
+        {
+            FusionPlayerAvatar playerAvatar = playerObject.GetComponent<FusionPlayerAvatar>();
+            if (playerAvatar != null && !string.IsNullOrWhiteSpace(playerAvatar.UserId))
+            {
+                return playerAvatar.UserId;
+            }
+        }
+
+        if (runner != null && playerRef == runner.LocalPlayer && !string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            return SupabaseSession.UserId;
+        }
+
+        List<RoomService.RoomPlayerData> players = OnlineRoomSession.Players;
+        int roomPlayerIndex = playerRef.PlayerId - 1;
+        if (players != null
+            && roomPlayerIndex >= 0
+            && roomPlayerIndex < players.Count
+            && players[roomPlayerIndex] != null
+            && !string.IsNullOrWhiteSpace(players[roomPlayerIndex].user_id))
+        {
+            return players[roomPlayerIndex].user_id;
+        }
+
+        return null;
+    }
+
+    public bool BroadcastMatchStat(OnlineMatchStats.StatEventType eventType, string userId, int amount = 1)
+    {
+        if (Object == null || !Object.IsValid || string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        NetworkString<_64> networkUserId = userId.Trim();
+        RPC_ReportMatchStat((int)eventType, networkUserId, amount);
+        return true;
+    }
+
     private void MoveLocalPlayer(float deltaTime)
     {
         if (deltaTime <= 0f)
@@ -1276,6 +1356,12 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
 
         networkHealth?.ForceSyncNow();
+        string reviverUserId = reviverAvatar.UserId;
+        if (!string.IsNullOrWhiteSpace(reviverUserId))
+        {
+            BroadcastMatchStatEvent(OnlineMatchStats.StatEventType.Revive, reviverUserId);
+        }
+
         RPC_ApplyRevive(reviveHealth);
     }
 
@@ -1359,6 +1445,12 @@ public class FusionPlayerAvatar : NetworkBehaviour
         NetworkMatchManager.Ensure().ApplyNetworkResult(resultState);
     }
 
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    private void RPC_ReportMatchStat(int eventTypeValue, NetworkString<_64> userId, int amount)
+    {
+        OnlineMatchStats.ApplyNetworkEvent((OnlineMatchStats.StatEventType)eventTypeValue, userId.ToString(), amount);
+    }
+
     private void SubscribeHealth()
     {
         if (health == null)
@@ -1407,15 +1499,27 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         if (Object != null && Object.IsValid && Object.HasStateAuthority)
         {
+            string userId = UserId;
+
             if (canBeRevivedAfterThisDeath)
             {
                 IsDowned = true;
                 IsEliminated = false;
+
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    BroadcastMatchStatEvent(OnlineMatchStats.StatEventType.Down, userId);
+                }
             }
             else
             {
                 IsDowned = false;
                 IsEliminated = true;
+
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    BroadcastMatchStatEvent(OnlineMatchStats.StatEventType.Dead, userId);
+                }
             }
         }
 

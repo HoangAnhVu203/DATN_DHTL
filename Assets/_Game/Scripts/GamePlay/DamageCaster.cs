@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Fusion;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
@@ -87,7 +88,8 @@ public class DamageCaster : MonoBehaviour
             }
 
             MarkRecentNetworkHit(targetNetworkEnemy);
-            if (targetNetworkEnemy.RequestDamage(damage, attackerPosition, GetDamageSourceId()))
+            PlayerRef attacker = ownerNetworkAvatar != null ? ownerNetworkAvatar.NetworkPlayerRef : PlayerRef.None;
+            if (targetNetworkEnemy.RequestDamage(damage, attackerPosition, GetDamageSourceId(), attacker))
             {
                 PlayHitVFX(other);
                 MarkDamagedTarget(targetNetworkEnemy);

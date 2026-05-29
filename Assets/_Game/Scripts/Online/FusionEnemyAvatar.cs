@@ -123,19 +123,19 @@ public class FusionEnemyAvatar : NetworkBehaviour
         animator.SetBool(IsGroundedParameter, true);
     }
 
-    public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0)
+    public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0, PlayerRef attacker = default)
     {
         if (damage <= 0 || Object == null || !Object.IsValid)
         {
             return false;
         }
 
-        RPC_ApplyDamage(damage, attackPosition, damageSourceId);
+        RPC_ApplyDamage(damage, attackPosition, damageSourceId, attacker);
         return true;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId)
+    private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId, PlayerRef attacker)
     {
         if (enemy == null || !Object.HasStateAuthority)
         {
@@ -156,7 +156,23 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
         lastDamageSourceId = damageSourceId;
         lastDamageTime = now;
+
+        int hpBefore = health != null ? health.currentHealth : 0;
         enemy.ApplyDamage(damage, attackPosition);
+        int hpAfter = health != null ? health.currentHealth : 0;
+        int actualDamage = Mathf.Max(0, hpBefore - hpAfter);
+
+        string attackerUserId = FusionPlayerAvatar.GetUserIdForPlayerRef(Runner, attacker);
+        if (!string.IsNullOrWhiteSpace(attackerUserId) && actualDamage > 0)
+        {
+            FusionPlayerAvatar.BroadcastMatchStatEvent(OnlineMatchStats.StatEventType.Damage, attackerUserId, actualDamage);
+
+            if (hpBefore > 0 && hpAfter <= 0)
+            {
+                FusionPlayerAvatar.BroadcastMatchStatEvent(OnlineMatchStats.StatEventType.Kill, attackerUserId);
+            }
+        }
+
         networkHealth?.ForceSyncNow();
     }
 

@@ -44,6 +44,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         }
 
         OnlineMatchLoadingOverlay.Show(0.6f);
+        OnlineMatchStats.StartMatch(OnlineRoomSession.MatchId, OnlineRoomSession.Players);
 
         if (networkPlayerPrefab == null)
         {

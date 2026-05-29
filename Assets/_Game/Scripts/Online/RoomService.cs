@@ -538,6 +538,8 @@ public class RoomService : MonoBehaviour
 
     private EndMatchPlayerData[] BuildEndMatchPlayers(string result)
     {
+        OnlineMatchStats.EnsureStarted();
+
         bool isWin = string.Equals(result, "win", StringComparison.OrdinalIgnoreCase)
                      || string.Equals(result, "victory", StringComparison.OrdinalIgnoreCase);
 
@@ -551,15 +553,24 @@ public class RoomService : MonoBehaviour
                     continue;
                 }
 
+                OnlineMatchStats.MatchPlayerStats stats = OnlineMatchStats.GetStats(player.user_id);
+                int surviveTime = OnlineMatchStats.GetSurviveTimeSeconds(player.user_id);
+                bool isDead = stats.isDead || !isWin;
+                Debug.Log(
+                    $"RoomService: end_match stats user={player.user_id}, " +
+                    $"survive={surviveTime}, kills={stats.kills}, downs={stats.downs}, " +
+                    $"revives={stats.revives}, damage={stats.damageDealt}, dead={isDead}, win={isWin}."
+                );
+
                 players.Add(new EndMatchPlayerData
                 {
                     user_id = player.user_id,
-                    survive_time_sec = 0,
-                    kills = 0,
-                    downs = 0,
-                    revives = 0,
-                    damage_dealt = 0,
-                    is_dead = !isWin,
+                    survive_time_sec = surviveTime,
+                    kills = stats.kills,
+                    downs = stats.downs,
+                    revives = stats.revives,
+                    damage_dealt = stats.damageDealt,
+                    is_dead = isDead,
                     is_win = isWin
                 });
             }
@@ -567,15 +578,24 @@ public class RoomService : MonoBehaviour
 
         if (players.Count == 0 && !string.IsNullOrWhiteSpace(SupabaseSession.UserId))
         {
+            OnlineMatchStats.MatchPlayerStats stats = OnlineMatchStats.GetStats(SupabaseSession.UserId);
+            int surviveTime = OnlineMatchStats.GetSurviveTimeSeconds(SupabaseSession.UserId);
+            bool isDead = stats.isDead || !isWin;
+            Debug.Log(
+                $"RoomService: end_match fallback stats user={SupabaseSession.UserId}, " +
+                $"survive={surviveTime}, kills={stats.kills}, downs={stats.downs}, " +
+                $"revives={stats.revives}, damage={stats.damageDealt}, dead={isDead}, win={isWin}."
+            );
+
             players.Add(new EndMatchPlayerData
             {
                 user_id = SupabaseSession.UserId,
-                survive_time_sec = 0,
-                kills = 0,
-                downs = 0,
-                revives = 0,
-                damage_dealt = 0,
-                is_dead = !isWin,
+                survive_time_sec = surviveTime,
+                kills = stats.kills,
+                downs = stats.downs,
+                revives = stats.revives,
+                damage_dealt = stats.damageDealt,
+                is_dead = isDead,
                 is_win = isWin
             });
         }
