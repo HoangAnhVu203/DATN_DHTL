@@ -1,4 +1,5 @@
 ﻿using TMPro;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +23,7 @@ public class PanelLogin : MonoBehaviour
     [SerializeField] private GameObject panelToHideOnSuccess;
 
     private bool isRegisterMode;
+    private Coroutine loginLoadingCoroutine;
 
     private void Awake()
     {
@@ -50,10 +52,19 @@ public class PanelLogin : MonoBehaviour
         }
 
         RefreshModeText();
+        HideIfAlreadyLoggedIn();
+    }
+
+    private void OnEnable()
+    {
+        HideIfAlreadyLoggedIn();
     }
 
     private void OnDestroy()
     {
+        StopLoginLoading();
+        OnlineMatchLoadingOverlay.Hide();
+
         loginButton.onClick.RemoveListener(OnSubmitClicked);
 
         if (registerToggleButton != null)
@@ -84,21 +95,25 @@ public class PanelLogin : MonoBehaviour
         }
 
         SetStatus("Đang đăng nhập...");
+        StartLoginLoading();
         StartCoroutine(authService.SignIn(email, password, OnLoginCompleted));
     }
 
     private void OnLoginCompleted(bool success, string message)
     {
+        StopLoginLoading();
         loginButton.interactable = true;
         SetToggleInteractable(true);
 
         if (!success)
         {
+            OnlineMatchLoadingOverlay.Hide();
             SetStatus(GetUserFriendlyError(message, false));
             Debug.LogError(message);
             return;
         }
 
+        OnlineMatchLoadingOverlay.SetProgress(0.85f);
         SetStatus("Đăng nhập thành công.");
         UpdateDisplayName();
         PanelInformation.RefreshInformationPlayerAvatar();
@@ -108,7 +123,39 @@ public class PanelLogin : MonoBehaviour
             panelToHideOnSuccess.SetActive(false);
         }
 
+        OnlineMatchLoadingOverlay.SetProgress(1f);
+        OnlineMatchLoadingOverlay.Hide();
         Debug.Log($"Logged in: {SupabaseSession.UserId} - {SupabaseSession.DisplayName}");
+    }
+
+    private void StartLoginLoading()
+    {
+        StopLoginLoading();
+        OnlineMatchLoadingOverlay.Show(0.05f);
+        loginLoadingCoroutine = StartCoroutine(LoginLoadingRoutine());
+    }
+
+    private void StopLoginLoading()
+    {
+        if (loginLoadingCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(loginLoadingCoroutine);
+        loginLoadingCoroutine = null;
+    }
+
+    private IEnumerator LoginLoadingRoutine()
+    {
+        float progress = 0.05f;
+
+        while (true)
+        {
+            progress = Mathf.MoveTowards(progress, 0.8f, Time.unscaledDeltaTime * 0.35f);
+            OnlineMatchLoadingOverlay.SetProgress(progress);
+            yield return null;
+        }
     }
 
     private void OnRegisterCompleted(bool success, string message)
@@ -187,6 +234,26 @@ public class PanelLogin : MonoBehaviour
         }
 
         displayNameText.text = SupabaseSession.DisplayName;
+    }
+
+    private void HideIfAlreadyLoggedIn()
+    {
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            return;
+        }
+
+        UpdateDisplayName();
+        PanelInformation.RefreshInformationPlayerAvatar();
+
+        if (panelToHideOnSuccess != null)
+        {
+            panelToHideOnSuccess.SetActive(false);
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
     }
 
     private void ToggleMode()

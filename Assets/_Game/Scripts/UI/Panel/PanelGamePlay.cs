@@ -1,6 +1,10 @@
+using System;
+using System.Collections;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Networking;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
@@ -31,6 +35,10 @@ public class PanelGamePlay : UICanvas
     private float reviveHoldTimer;
     private bool reviveButtonHeld;
     private bool reviveRequestSent;
+    private bool hasObservedGameplayCoin;
+    private int lastObservedGameplayCoin;
+    private bool isSavingCoin;
+    private int requestedCoinSaveTotal = -1;
 
     private void OnEnable()
     {
@@ -312,6 +320,8 @@ public class PanelGamePlay : UICanvas
         {
             player.CoinChanged += OnPlayerCoinChanged;
             subscribedPlayer = player;
+            lastObservedGameplayCoin = player.CoinAmount;
+            hasObservedGameplayCoin = true;
         }
     }
 
@@ -386,6 +396,112 @@ public class PanelGamePlay : UICanvas
         {
             coinText.text = coin.ToString();
         }
+
+        if (!hasObservedGameplayCoin)
+        {
+            lastObservedGameplayCoin = coin;
+            hasObservedGameplayCoin = true;
+            return;
+        }
+
+        int collectedCoin = coin - lastObservedGameplayCoin;
+        lastObservedGameplayCoin = coin;
+
+        if (collectedCoin <= 0 || !CanSaveCollectedCoin())
+        {
+            return;
+        }
+
+        SupabaseSession.AddCoin(collectedCoin);
+        QueueCoinSave(SupabaseSession.Coin);
+    }
+
+    private bool CanSaveCollectedCoin()
+    {
+        if (!SupabaseSession.IsLoggedIn || string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            return false;
+        }
+
+        return fusionPlayerAvatar == null || fusionPlayerAvatar.IsLocalPlayerAvatar;
+    }
+
+    private void QueueCoinSave(int totalCoin)
+    {
+        requestedCoinSaveTotal = Mathf.Max(0, totalCoin);
+
+        if (!isSavingCoin)
+        {
+            StartCoroutine(SaveCoinRoutine());
+        }
+    }
+
+    private IEnumerator SaveCoinRoutine()
+    {
+        isSavingCoin = true;
+
+        while (requestedCoinSaveTotal >= 0)
+        {
+            int totalToSave = requestedCoinSaveTotal;
+            requestedCoinSaveTotal = -1;
+
+            yield return SaveCoinTotal(totalToSave);
+        }
+
+        isSavingCoin = false;
+    }
+
+    private IEnumerator SaveCoinTotal(int totalCoin)
+    {
+        AuthService authService = FindFirstObjectByType<AuthService>();
+        SupabaseConfig config = authService != null ? authService.Config : SupabaseSession.Config;
+
+        if (config == null
+            || string.IsNullOrWhiteSpace(config.SupabaseUrl)
+            || string.IsNullOrWhiteSpace(config.AnonKey)
+            || string.IsNullOrWhiteSpace(SupabaseSession.AccessToken)
+            || string.IsNullOrWhiteSpace(SupabaseSession.UserId))
+        {
+            Debug.LogWarning("PanelGamePlay: cannot save coin because Supabase config/session is missing.");
+            yield break;
+        }
+
+        string userId = Uri.EscapeDataString(SupabaseSession.UserId);
+        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{userId}";
+        string jsonBody = JsonUtility.ToJson(new UpdateCoinRequest
+        {
+            coin = totalCoin,
+            updated_at = DateTime.UtcNow.ToString("O")
+        });
+
+        using UnityWebRequest request = new UnityWebRequest(url, "PATCH");
+        byte[] body = Encoding.UTF8.GetBytes(jsonBody);
+        request.uploadHandler = new UploadHandlerRaw(body);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("apikey", config.AnonKey);
+        request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
+        request.SetRequestHeader("Accept", "application/json");
+
+        yield return request.SendWebRequest();
+
+        string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
+        if (request.responseCode < 200 || request.responseCode >= 300 || request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError($"PanelGamePlay: save coin failed. HTTP {request.responseCode}: {(string.IsNullOrWhiteSpace(responseText) ? request.error : responseText)}");
+            requestedCoinSaveTotal = Mathf.Max(requestedCoinSaveTotal, totalCoin);
+            yield return new WaitForSecondsRealtime(2f);
+            yield break;
+        }
+
+        Debug.Log($"PanelGamePlay: saved total coin {totalCoin} for user {SupabaseSession.UserId}.");
+    }
+
+    [Serializable]
+    private class UpdateCoinRequest
+    {
+        public int coin;
+        public string updated_at;
     }
 
     private void BindReviveButtonEvents()

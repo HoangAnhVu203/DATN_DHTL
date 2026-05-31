@@ -3247,6 +3247,8 @@ MonoBehaviour:
   stateAfterLoading: 2
   loadingDuration: 0.5
   loseDelayAfterPlayerDeath: 5
+  victorySlowMotionDuration: 2
+  victorySlowMotionScale: 0.2
   autoFindSceneObjects: 1
   openGameplayUIOnStartMatch: 1
   player: {fileID: 2022720099}
@@ -5248,6 +5250,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -4265879038994428902, guid: d2110d3edbbbd334abd38eeab2d300d7, type: 3}
+      propertyPath: health
+      value: 
+      objectReference: {fileID: 608960656507855181}
     - target: {fileID: -1577039580866764515, guid: d2110d3edbbbd334abd38eeab2d300d7, type: 3}
       propertyPath: SortKey
       value: 1264829032
@@ -5301,6 +5307,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d2110d3edbbbd334abd38eeab2d300d7, type: 3}
+--- !u!114 &608960656507855181 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6578949617232299018, guid: d2110d3edbbbd334abd38eeab2d300d7, type: 3}
+  m_PrefabInstance: {fileID: 608960656507855180}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76531e87a4a61e242b6f37256be01555, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Health
 --- !u!1001 &9154491437075862124
 PrefabInstance:
   m_ObjectHideFlags: 0

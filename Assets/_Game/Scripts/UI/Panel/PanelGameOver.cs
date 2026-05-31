@@ -5,11 +5,13 @@ public class PanelGameOver : UICanvas
 {
     [SerializeField] private Button returnRoomButton;
     [SerializeField] private Button restartButton;
+    [SerializeField] private MatchResultLeaderboardRenderer leaderboardRenderer;
 
     public override void SetUp()
     {
         base.SetUp();
         ResolveReferences();
+        RenderMatchLeaderboard();
     }
 
     private void OnDestroy()
@@ -27,6 +29,15 @@ public class PanelGameOver : UICanvas
         if (restartButton == null)
         {
             restartButton = FindButton("Button_Restart");
+        }
+
+        if (leaderboardRenderer == null)
+        {
+            leaderboardRenderer = GetComponent<MatchResultLeaderboardRenderer>();
+            if (leaderboardRenderer == null)
+            {
+                leaderboardRenderer = gameObject.AddComponent<MatchResultLeaderboardRenderer>();
+            }
         }
 
         RemoveListeners();
@@ -71,5 +82,13 @@ public class PanelGameOver : UICanvas
     private void ReturnToRoom()
     {
         ReturnToRoomAfterMatch.StartReturn();
+    }
+
+    private void RenderMatchLeaderboard()
+    {
+        if (leaderboardRenderer != null)
+        {
+            leaderboardRenderer.Render();
+        }
     }
 }

@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameState stateAfterLoading = GameState.StartMatch;
     [SerializeField] private float loadingDuration = 0.5f;
     [SerializeField] private float loseDelayAfterPlayerDeath = 5f;
+    [SerializeField] private float victorySlowMotionDuration = 2f;
+    [SerializeField] private float victorySlowMotionScale = 0.2f;
     [SerializeField] private bool autoFindSceneObjects = true;
     [SerializeField] private bool openGameplayUIOnStartMatch = true;
     [SerializeField] private Player player;
@@ -18,6 +20,7 @@ public class GameManager : MonoBehaviour
 
     private Coroutine loadingCoroutine;
     private Coroutine delayedLoseCoroutine;
+    private Coroutine victorySlowMotionCoroutine;
     private bool hasFinishedMatch;
     private bool hasEnteredState;
 
@@ -51,6 +54,7 @@ public class GameManager : MonoBehaviour
     private void OnDestroy()
     {
         StopDelayedLose();
+        StopVictorySlowMotion(resetTimeScale: false);
         UnsubscribeSceneEvents();
 
         if (Instance == this)
@@ -82,6 +86,7 @@ public class GameManager : MonoBehaviour
     {
         hasFinishedMatch = false;
         StopDelayedLose();
+        StopVictorySlowMotion(resetTimeScale: true);
         ChangeState(GameState.Home);
     }
 
@@ -89,6 +94,7 @@ public class GameManager : MonoBehaviour
     {
         hasFinishedMatch = false;
         StopDelayedLose();
+        StopVictorySlowMotion(resetTimeScale: true);
         ChangeState(GameState.StartMatch);
     }
 
@@ -164,6 +170,7 @@ public class GameManager : MonoBehaviour
                 break;
 
             case GameState.StartMatch:
+                StopVictorySlowMotion(resetTimeScale: false);
                 Time.timeScale = 1f;
                 OpenGameplayUI();
                 break;
@@ -178,12 +185,11 @@ public class GameManager : MonoBehaviour
                 break;
 
             case GameState.Victory:
-                Time.timeScale = 0f;
-                CloseGameplayUI();
-                OpenGameIsFinishedUI();
+                EnterVictory();
                 break;
 
             case GameState.Lose:
+                StopVictorySlowMotion(resetTimeScale: false);
                 Time.timeScale = 0f;
                 CloseGameplayUI();
                 OpenGameOverUI();
@@ -197,6 +203,11 @@ public class GameManager : MonoBehaviour
         {
             StopCoroutine(loadingCoroutine);
             loadingCoroutine = null;
+        }
+
+        if (state == GameState.Victory)
+        {
+            StopVictorySlowMotion(resetTimeScale: false);
         }
     }
 
@@ -222,6 +233,33 @@ public class GameManager : MonoBehaviour
 
         loadingCoroutine = null;
         ChangeState(stateAfterLoading);
+    }
+
+    private void EnterVictory()
+    {
+        StopVictorySlowMotion(resetTimeScale: false);
+
+        if (victorySlowMotionDuration <= 0f)
+        {
+            Time.timeScale = 0f;
+            CloseGameplayUI();
+            OpenGameIsFinishedUI();
+            return;
+        }
+
+        victorySlowMotionCoroutine = StartCoroutine(VictorySlowMotionRoutine());
+    }
+
+    private IEnumerator VictorySlowMotionRoutine()
+    {
+        Time.timeScale = Mathf.Clamp(victorySlowMotionScale, 0.01f, 1f);
+
+        yield return new WaitForSecondsRealtime(victorySlowMotionDuration);
+
+        victorySlowMotionCoroutine = null;
+        Time.timeScale = 0f;
+        CloseGameplayUI();
+        OpenGameIsFinishedUI();
     }
 
     private void FinishMatch(GameState resultState)
@@ -326,6 +364,20 @@ public class GameManager : MonoBehaviour
 
         StopCoroutine(delayedLoseCoroutine);
         delayedLoseCoroutine = null;
+    }
+
+    private void StopVictorySlowMotion(bool resetTimeScale)
+    {
+        if (victorySlowMotionCoroutine != null)
+        {
+            StopCoroutine(victorySlowMotionCoroutine);
+            victorySlowMotionCoroutine = null;
+        }
+
+        if (resetTimeScale)
+        {
+            Time.timeScale = 1f;
+        }
     }
 
     private void OnSpawnerCleared(Spawner clearedSpawner)

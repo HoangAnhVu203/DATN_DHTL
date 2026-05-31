@@ -5,6 +5,7 @@ using UnityEngine;
 public static class OnlineMatchStats
 {
     private static readonly Dictionary<string, MatchPlayerStats> StatsByUserId = new Dictionary<string, MatchPlayerStats>();
+    private static readonly Dictionary<string, string> DisplayNameByUserId = new Dictionary<string, string>();
 
     private static string currentMatchId;
     private static float matchStartRealtime;
@@ -22,6 +23,7 @@ public static class OnlineMatchStats
         matchStartRealtime = Time.realtimeSinceStartup;
         matchStarted = true;
         StatsByUserId.Clear();
+        DisplayNameByUserId.Clear();
         RegisterPlayers(players);
 
         Debug.Log($"OnlineMatchStats: started match '{currentMatchId}'.");
@@ -138,7 +140,95 @@ public static class OnlineMatchStats
             }
 
             GetOrCreate(player.user_id);
+            DisplayNameByUserId[player.user_id] = GetBestDisplayName(player);
         }
+    }
+
+    public static List<MatchLeaderboardRow> GetLeaderboardSnapshot()
+    {
+        EnsureStarted();
+
+        List<MatchLeaderboardRow> rows = new List<MatchLeaderboardRow>();
+        foreach (KeyValuePair<string, MatchPlayerStats> entry in StatsByUserId)
+        {
+            MatchPlayerStats stats = entry.Value;
+            rows.Add(new MatchLeaderboardRow
+            {
+                userId = entry.Key,
+                displayName = GetDisplayName(entry.Key),
+                kills = stats.kills,
+                damageDealt = stats.damageDealt,
+                revives = stats.revives
+            });
+        }
+
+        rows.Sort((left, right) =>
+        {
+            int compare = right.kills.CompareTo(left.kills);
+            if (compare != 0)
+            {
+                return compare;
+            }
+
+            compare = right.damageDealt.CompareTo(left.damageDealt);
+            if (compare != 0)
+            {
+                return compare;
+            }
+
+            compare = right.revives.CompareTo(left.revives);
+            if (compare != 0)
+            {
+                return compare;
+            }
+
+            return string.Compare(left.displayName, right.displayName, StringComparison.OrdinalIgnoreCase);
+        });
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            rows[i].rank = i + 1;
+        }
+
+        return rows;
+    }
+
+    private static string GetDisplayName(string userId)
+    {
+        if (!string.IsNullOrWhiteSpace(userId) && DisplayNameByUserId.TryGetValue(userId, out string displayName) && !string.IsNullOrWhiteSpace(displayName))
+        {
+            return displayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(userId) && userId == SupabaseSession.UserId)
+        {
+            if (!string.IsNullOrWhiteSpace(SupabaseSession.DisplayName))
+            {
+                return SupabaseSession.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SupabaseSession.Username))
+            {
+                return SupabaseSession.Username;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(userId) ? "Player" : userId;
+    }
+
+    private static string GetBestDisplayName(RoomService.RoomPlayerData player)
+    {
+        if (player == null)
+        {
+            return "Player";
+        }
+
+        if (!string.IsNullOrWhiteSpace(player.display_name))
+        {
+            return player.display_name;
+        }
+
+        return string.IsNullOrWhiteSpace(player.user_id) ? "Player" : player.user_id;
     }
 
     private static MatchPlayerStats GetOrCreate(string userId)
@@ -186,5 +276,15 @@ public static class OnlineMatchStats
         public int damageDealt;
         public bool isDead;
         public float eliminatedRealtime = -1f;
+    }
+
+    public class MatchLeaderboardRow
+    {
+        public int rank;
+        public string userId;
+        public string displayName;
+        public int kills;
+        public int damageDealt;
+        public int revives;
     }
 }

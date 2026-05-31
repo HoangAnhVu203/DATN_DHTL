@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 public class ReturnToRoomAfterMatch : MonoBehaviour
 {
     private const string HomeSceneName = "HomeScene";
+    private const float LoadingCompleteHoldSeconds = 0.2f;
 
     private bool isReturning;
     private string returningRoomId;
@@ -40,6 +41,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
     private IEnumerator ReturnRoutine()
     {
         Time.timeScale = 1f;
+        OnlineMatchLoadingOverlay.Show(0f);
 
         returningRoomId = OnlineRoomSession.RoomId;
         returningMatchId = OnlineRoomSession.MatchId;
@@ -49,15 +51,43 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         OnlineRoomSession.MarkCurrentMatchCompleted();
         OnlineRoomSession.ClearMatch();
 
+        yield return null;
+        OnlineMatchLoadingOverlay.SetProgress(0.05f);
+
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(HomeSceneName);
-        while (loadOperation != null && !loadOperation.isDone)
+        if (loadOperation == null)
         {
+            Debug.LogError($"ReturnToRoomAfterMatch: could not load scene '{HomeSceneName}'.");
+            OnlineMatchLoadingOverlay.Hide();
+            Destroy(gameObject);
+            yield break;
+        }
+
+        while (!loadOperation.isDone)
+        {
+            float sceneProgress = Mathf.Clamp01(loadOperation.progress / 0.9f);
+            OnlineMatchLoadingOverlay.SetProgress(Mathf.Lerp(0.05f, 0.6f, sceneProgress));
             yield return null;
         }
 
+        OnlineMatchLoadingOverlay.SetProgress(0.65f);
         yield return null;
+
         yield return ResetRoomStateAfterMatch();
+        OnlineMatchLoadingOverlay.SetProgress(0.85f);
+
         OpenRoomPanel();
+        OnlineMatchLoadingOverlay.SetProgress(0.95f);
+
+        yield return null;
+        OnlineMatchLoadingOverlay.SetProgress(1f);
+
+        if (LoadingCompleteHoldSeconds > 0f)
+        {
+            yield return new WaitForSecondsRealtime(LoadingCompleteHoldSeconds);
+        }
+
+        OnlineMatchLoadingOverlay.Hide();
         Destroy(gameObject);
     }
 

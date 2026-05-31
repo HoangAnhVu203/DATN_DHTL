@@ -23,6 +23,7 @@ public class PanelInformation : UICanvas
     [SerializeField] private Button editUsernameButton;
     [SerializeField] private Button editDisplayNameButton;
     [SerializeField] private Button closeButton;
+    [SerializeField] private Button historyButton;
     [SerializeField] private TMP_Text statusText;
 
     private readonly List<Sprite> avatarSprites = new List<Sprite>();
@@ -106,6 +107,11 @@ public class PanelInformation : UICanvas
         {
             closeButton.onClick.RemoveListener(OnCloseClicked);
         }
+
+        if (historyButton != null)
+        {
+            historyButton.onClick.RemoveListener(OpenMatchHistoryPanel);
+        }
     }
 
     private void ResolveReferences()
@@ -173,6 +179,12 @@ public class PanelInformation : UICanvas
         {
             closeButton.onClick.RemoveListener(OnCloseClicked);
             closeButton.onClick.AddListener(OnCloseClicked);
+        }
+
+        if (historyButton != null)
+        {
+            historyButton.onClick.RemoveListener(OpenMatchHistoryPanel);
+            historyButton.onClick.AddListener(OpenMatchHistoryPanel);
         }
 
         if (selectAvatarPanel != null)
@@ -352,6 +364,17 @@ public class PanelInformation : UICanvas
         }
 
         StartCoroutine(SaveAndCloseRoutine());
+    }
+
+    private void OpenMatchHistoryPanel()
+    {
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            SetStatus("Ban chua dang nhap.");
+            return;
+        }
+
+        PanelMatchHistory.OpenFromScene();
     }
 
     private IEnumerator SaveAndCloseRoutine()

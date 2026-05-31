@@ -10,6 +10,11 @@ public class AuthService : MonoBehaviour
 
     public SupabaseConfig Config => config;
 
+    private void Awake()
+    {
+        SupabaseSession.SetConfig(config);
+    }
+
     public IEnumerator SignUp(string email, string password, Action<bool, string> callback)
     {
         if (!HasValidConfig(callback))
@@ -113,6 +118,8 @@ public class AuthService : MonoBehaviour
         SupabaseSession.UserId = response.user.id;
         SupabaseSession.Email = response.user.email;
         SupabaseSession.DisplayName = response.user.GetDisplayName();
+        SupabaseSession.SetConfig(config);
+        SupabaseSession.SetCoin(0);
 
         yield return LoadUserProfile(SupabaseSession.UserId, profile =>
         {
@@ -123,6 +130,7 @@ public class AuthService : MonoBehaviour
 
             SupabaseSession.Username = profile.username;
             SupabaseSession.AvatarUrl = profile.avatar_url;
+            SupabaseSession.SetCoin(profile.coin);
 
             if (!string.IsNullOrWhiteSpace(profile.GetDisplayName()))
             {
@@ -172,7 +180,7 @@ public class AuthService : MonoBehaviour
         }
 
         string escapedUserId = Uri.EscapeDataString(userId);
-        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{escapedUserId}&select=id,display_name,username,avatar_url";
+        string url = $"{config.SupabaseUrl}/rest/v1/users?id=eq.{escapedUserId}&select=id,display_name,username,avatar_url,coin";
 
         using UnityWebRequest request = UnityWebRequest.Get(url);
         request.SetRequestHeader("apikey", config.AnonKey);
@@ -313,6 +321,7 @@ public class AuthService : MonoBehaviour
         public string display_name;
         public string username;
         public string avatar_url;
+        public int coin;
 
         public string GetDisplayName()
         {

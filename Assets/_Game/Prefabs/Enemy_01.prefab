@@ -209,6 +209,7 @@ MonoBehaviour:
   playSpawnDissolveOnStart: 0
   spawnDissolveDelay: 0
   itemDrop: {fileID: 7108716012023397961, guid: 0a9bc6fec8932bd4788bef5f36ed5200, type: 3}
+  itemDropHeightOffset: 0.3
   isInvincible: 0
   invincibleDuration: 2
   Coin: 0
@@ -217,8 +218,9 @@ MonoBehaviour:
   attackRange: 2
   attackDuration: 0.65
   attackTurnSpeed: 12
-  detectionRange: 20
   repathInterval: 0.2
+  targetRefreshInterval: 0.25
+  targetPathSampleDistance: 2
 --- !u!114 &1650976010910818354
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -336,11 +338,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FusionEnemyAvatar
   enemy: {fileID: 3570025386580412690}
   characterController: {fileID: 3018361810035516467}
+  animator: {fileID: 5051682443345132526}
   navMeshAgent: {fileID: 2103940234530675900}
   damageCaster: {fileID: 6053042145779881754}
   rangedAttack: {fileID: 0}
+  health: {fileID: 3197131157360376153}
   networkHealth: {fileID: -6123456789012345677}
   targetRefreshInterval: 0.25
+  proxyAnimationMoveSpeed: 2.5
+  proxyAnimatorDampTime: 0.08
+  proxyStopAnimatorDampTime: 0.02
+  targetPathSampleDistance: 2
   playSpawnDissolveOnAuthority: 1
 --- !u!1 &7728130344068037604
 GameObject:

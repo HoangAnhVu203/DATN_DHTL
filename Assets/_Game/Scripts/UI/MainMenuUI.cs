@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -9,6 +10,8 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private float minimumLoadingTime = 0.5f;
     [SerializeField] private PanelLoading loadingPanelPrefab;
     [SerializeField] private Button informationPlayerButton;
+    [SerializeField] private Button matchHistoryButton;
+    [SerializeField] private TMP_Text coinText;
 
     private bool isLoading;
 
@@ -27,6 +30,24 @@ public class MainMenuUI : MonoBehaviour
         {
             informationPlayerButton.onClick.AddListener(OpenInformationPanel);
         }
+
+        if (matchHistoryButton == null)
+        {
+            matchHistoryButton = FindButtonByNames("MatchHistory", "MatchHistoryBtn", "HistoryBtn", "ButtonMatchHistory");
+        }
+
+        if (matchHistoryButton != null)
+        {
+            matchHistoryButton.onClick.AddListener(OpenMatchHistoryPanel);
+        }
+
+        if (coinText == null)
+        {
+            coinText = FindTextByNames("CoinTxt", "CoinText", "PlayerCoinText");
+        }
+
+        SupabaseSession.CoinChanged += OnSessionCoinChanged;
+        RefreshCoinText();
     }
 
     private void OnDestroy()
@@ -35,6 +56,13 @@ public class MainMenuUI : MonoBehaviour
         {
             informationPlayerButton.onClick.RemoveListener(OpenInformationPanel);
         }
+
+        if (matchHistoryButton != null)
+        {
+            matchHistoryButton.onClick.RemoveListener(OpenMatchHistoryPanel);
+        }
+
+        SupabaseSession.CoinChanged -= OnSessionCoinChanged;
     }
 
     public void StartGame()
@@ -44,11 +72,18 @@ public class MainMenuUI : MonoBehaviour
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(gameSceneName))
+        {
+            Debug.LogError("MainMenuUI: gameSceneName is empty.");
+            return;
+        }
+
+        OnlineRoomSession.Clear();
         isLoading = true;
 
         SceneLoadingRunner loadingRunner = new GameObject("Scene Loading Runner").AddComponent<SceneLoadingRunner>();
         DontDestroyOnLoad(loadingRunner.gameObject);
-        loadingRunner.LoadScene(gameSceneName, minimumLoadingTime, loadingPanelPrefab);
+        loadingRunner.LoadScene(gameSceneName, minimumLoadingTime, loadingPanelPrefab, () => isLoading = false);
     }
 
     private void OpenInformationPanel()
@@ -61,12 +96,79 @@ public class MainMenuUI : MonoBehaviour
 
         PanelInformation.OpenFromScene();
     }
+
+    private void OpenMatchHistoryPanel()
+    {
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            Debug.LogWarning("Login before opening match history.");
+            return;
+        }
+
+        PanelMatchHistory.OpenFromScene();
+    }
+
+    private Button FindButtonByNames(params string[] objectNames)
+    {
+        foreach (string objectName in objectNames)
+        {
+            GameObject buttonObject = GameObject.Find(objectName);
+            if (buttonObject == null)
+            {
+                continue;
+            }
+
+            Button button = buttonObject.GetComponent<Button>();
+            if (button != null)
+            {
+                return button;
+            }
+        }
+
+        return null;
+    }
+
+    private TMP_Text FindTextByNames(params string[] objectNames)
+    {
+        foreach (string objectName in objectNames)
+        {
+            GameObject textObject = GameObject.Find(objectName);
+            if (textObject == null)
+            {
+                continue;
+            }
+
+            TMP_Text text = textObject.GetComponent<TMP_Text>();
+            if (text != null)
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnSessionCoinChanged(int coin)
+    {
+        RefreshCoinText();
+    }
+
+    private void RefreshCoinText()
+    {
+        if (coinText != null)
+        {
+            coinText.text = SupabaseSession.Coin.ToString();
+        }
+    }
 }
 
 public class SceneLoadingRunner : MonoBehaviour
 {
-    public void LoadScene(string sceneName, float minimumLoadingTime, PanelLoading loadingPanelPrefab)
+    private System.Action onLoadFailed;
+
+    public void LoadScene(string sceneName, float minimumLoadingTime, PanelLoading loadingPanelPrefab, System.Action onLoadFailed = null)
     {
+        this.onLoadFailed = onLoadFailed;
         StartCoroutine(LoadSceneRoutine(sceneName, minimumLoadingTime, loadingPanelPrefab));
     }
 
@@ -83,6 +185,20 @@ public class SceneLoadingRunner : MonoBehaviour
         yield return null;
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(sceneName);
+        if (loadOperation == null)
+        {
+            Debug.LogError($"SceneLoadingRunner: cannot load scene '{sceneName}'. Check Build Settings and scene name.");
+
+            if (loadingPanel != null)
+            {
+                Destroy(loadingPanel.transform.root.gameObject);
+            }
+
+            onLoadFailed?.Invoke();
+            Destroy(gameObject);
+            yield break;
+        }
+
         loadOperation.allowSceneActivation = false;
 
         float elapsedTime = 0f;

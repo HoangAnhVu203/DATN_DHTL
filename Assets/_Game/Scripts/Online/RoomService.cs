@@ -9,6 +9,11 @@ public class RoomService : MonoBehaviour
 {
     [SerializeField] private SupabaseConfig config;
 
+    private void Awake()
+    {
+        SupabaseSession.SetConfig(config);
+    }
+
     public IEnumerator CreateRoom(int maxPlayers, Action<bool, RoomData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new CreateRoomRequest
