@@ -20,9 +20,11 @@ public class DamageCaster : MonoBehaviour
     private List<Character> damageTargetList;
     private HashSet<int> damageTargetIdSet;
     private bool controlledDamageWindowActive;
+    private int baseDamage;
 
     private void Awake()
     {
+        baseDamage = Mathf.Max(0, damage);
         damageCasterCollider = GetComponent<Collider>();
         damageCasterCollider.isTrigger = true;
         damageCasterCollider.enabled = false;
@@ -33,6 +35,17 @@ public class DamageCaster : MonoBehaviour
         ownerRoot = ownerCharacter != null ? ownerCharacter.transform : null;
         damageTargetList = new List<Character>();
         damageTargetIdSet = new HashSet<int>();
+    }
+
+    public void ApplyDamageMultiplier(float multiplier)
+    {
+        float safeMultiplier = Mathf.Max(0.1f, multiplier);
+        if (baseDamage <= 0)
+        {
+            baseDamage = Mathf.Max(0, damage);
+        }
+
+        damage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * safeMultiplier));
     }
 
     private void OnTriggerEnter(Collider other)

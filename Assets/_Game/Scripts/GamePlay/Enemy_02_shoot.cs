@@ -7,6 +7,7 @@ public class Enemy_02_shoot : MonoBehaviour
     public GameObject DamageOrb;
     private Character cc;
     private FusionEnemyAvatar fusionEnemyAvatar;
+    private float damageMultiplier = 1f;
 
     private void Awake()
     {
@@ -27,7 +28,7 @@ public class Enemy_02_shoot : MonoBehaviour
 
         if (runner != null && runner.IsRunning && damageOrbNetworkObject != null)
         {
-            runner.Spawn(
+            NetworkObject spawnedOrb = runner.Spawn(
                 damageOrbNetworkObject,
                 ShootingPoint.position,
                 rotation,
@@ -35,10 +36,18 @@ public class Enemy_02_shoot : MonoBehaviour
                 null,
                 NetworkSpawnFlags.SharedModeStateAuthMasterClient
             );
+
+            ApplyDamageToSpawnedOrb(spawnedOrb != null ? spawnedOrb.gameObject : null);
             return;
         }
 
-        Instantiate(DamageOrb, ShootingPoint.position, rotation);
+        GameObject spawnedLocalOrb = Instantiate(DamageOrb, ShootingPoint.position, rotation);
+        ApplyDamageToSpawnedOrb(spawnedLocalOrb);
+    }
+
+    public void ApplyDamageMultiplier(float multiplier)
+    {
+        damageMultiplier = Mathf.Max(0.1f, multiplier);
     }
 
     private void Update()
@@ -52,6 +61,26 @@ public class Enemy_02_shoot : MonoBehaviour
     private bool CanShootLocally()
     {
         return fusionEnemyAvatar == null || fusionEnemyAvatar.HasStateAuthorityLocally;
+    }
+
+    private void ApplyDamageToSpawnedOrb(GameObject spawnedOrb)
+    {
+        if (spawnedOrb == null)
+        {
+            return;
+        }
+
+        DamageOrb damageOrb = spawnedOrb.GetComponent<DamageOrb>();
+        if (damageOrb != null)
+        {
+            damageOrb.ApplyDamageMultiplier(damageMultiplier);
+        }
+
+        FusionDamageOrb fusionDamageOrb = spawnedOrb.GetComponent<FusionDamageOrb>();
+        if (fusionDamageOrb != null && damageOrb != null)
+        {
+            fusionDamageOrb.SetNetworkDamage(damageOrb.damage);
+        }
     }
 
     private NetworkRunner FindActiveNetworkRunner()

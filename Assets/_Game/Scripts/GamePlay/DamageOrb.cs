@@ -8,11 +8,29 @@ public class DamageOrb : MonoBehaviour
     private Rigidbody rb;
     private FusionDamageOrb fusionDamageOrb;
     private bool isDestroyed;
+    private int baseDamage;
 
     private void Awake()
     {
+        baseDamage = Mathf.Max(0, damage);
         rb = GetComponent<Rigidbody>();
         fusionDamageOrb = GetComponent<FusionDamageOrb>();
+    }
+
+    public void ApplyDamageMultiplier(float multiplier)
+    {
+        float safeMultiplier = Mathf.Max(0.1f, multiplier);
+        if (baseDamage <= 0)
+        {
+            baseDamage = Mathf.Max(0, damage);
+        }
+
+        damage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * safeMultiplier));
+    }
+
+    public void SetDamageFromNetwork(int networkDamage)
+    {
+        damage = Mathf.Max(1, networkDamage);
     }
 
     private void FixedUpdate()

@@ -7,6 +7,8 @@ public class FusionDamageOrb : NetworkBehaviour
     [SerializeField] private DamageOrb damageOrb;
     [SerializeField] private Rigidbody orbRigidbody;
 
+    [Networked] public int NetworkDamage { get; private set; }
+
     public bool CanSimulateLocally => Object == null || !Object.IsValid || Object.HasStateAuthority;
     public bool IsNetworkSpawned => Object != null && Object.IsValid && Runner != null;
 
@@ -23,6 +25,24 @@ public class FusionDamageOrb : NetworkBehaviour
         {
             orbRigidbody.isKinematic = true;
         }
+
+        ApplyNetworkDamageToLocal();
+    }
+
+    public override void Render()
+    {
+        ApplyNetworkDamageToLocal();
+    }
+
+    public void SetNetworkDamage(int damage)
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
+        {
+            return;
+        }
+
+        NetworkDamage = Mathf.Max(1, damage);
+        ApplyNetworkDamageToLocal();
     }
 
     public void DestroyNetworkOrb(Vector3 hitPosition)
@@ -55,6 +75,14 @@ public class FusionDamageOrb : NetworkBehaviour
         if (orbRigidbody == null)
         {
             orbRigidbody = GetComponent<Rigidbody>();
+        }
+    }
+
+    private void ApplyNetworkDamageToLocal()
+    {
+        if (damageOrb != null && NetworkDamage > 0)
+        {
+            damageOrb.SetDamageFromNetwork(NetworkDamage);
         }
     }
 }

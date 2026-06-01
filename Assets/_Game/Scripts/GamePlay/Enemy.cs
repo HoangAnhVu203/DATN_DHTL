@@ -40,6 +40,19 @@ public class Enemy : Character
         RefreshClosestPlayerTarget();
     }
 
+    public override void ApplyRuntimeMoveSpeedMultiplier(float multiplier)
+    {
+        base.ApplyRuntimeMoveSpeedMultiplier(multiplier);
+
+        if (agent == null)
+        {
+            return;
+        }
+
+        agent.speed = MoveSpeed;
+        agent.acceleration = MoveSpeed * 4f;
+    }
+
     protected override Vector3 GetMoveDirection()
     {
         if (!UseExternalMovementTick && (target == null || Time.time >= nextTargetRefreshTime))

@@ -88,6 +88,21 @@ public static class OnlineMatchStats
         return Mathf.Max(0, Mathf.FloorToInt(endTime - matchStartRealtime));
     }
 
+    public static int GetMatchElapsedSeconds()
+    {
+        if (!matchStarted)
+        {
+            EnsureStarted();
+        }
+
+        if (!matchStarted)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(0, Mathf.FloorToInt(Time.realtimeSinceStartup - matchStartRealtime));
+    }
+
     public static void ApplyNetworkEvent(StatEventType eventType, string userId, int amount)
     {
         if (string.IsNullOrWhiteSpace(userId))

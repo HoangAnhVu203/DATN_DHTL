@@ -23,6 +23,7 @@ public class PanelGamePlay : UICanvas
     [SerializeField] private TMP_Text reviveButtonText;
     [SerializeField] private Slider healthSlider;
     [SerializeField] private TMP_Text coinText;
+    [SerializeField] private TMP_Text matchTimerText;
     [SerializeField] private float reviveHoldDuration = 3f;
 
     private Player player;
@@ -100,6 +101,7 @@ public class PanelGamePlay : UICanvas
 
     private void Update()
     {
+        UpdateMatchTimer();
         UpdateReviveButton(Time.unscaledDeltaTime);
 
         if (Time.unscaledTime >= nextPlayerSearchTime)
@@ -197,6 +199,14 @@ public class PanelGamePlay : UICanvas
             coinText = coinTextObject != null
                 ? coinTextObject.GetComponent<TMP_Text>()
                 : GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (matchTimerText == null)
+        {
+            GameObject timerTextObject = FindChildByName("MatchTimerText");
+            matchTimerText = timerTextObject != null
+                ? timerTextObject.GetComponent<TMP_Text>()
+                : null;
         }
 
         if (reviveButton == null)
@@ -342,6 +352,8 @@ public class PanelGamePlay : UICanvas
 
     private void RefreshPlayerStats()
     {
+        UpdateMatchTimer();
+
         if (playerHealth != null)
         {
             OnPlayerHealthChanged(playerHealth.currentHealth, playerHealth.maxHealth);
@@ -365,6 +377,19 @@ public class PanelGamePlay : UICanvas
         healthSlider.maxValue = safeMaxHealth;
         healthSlider.SetValueWithoutNotify(Mathf.Clamp(currentHealth, 0, safeMaxHealth));
         EnsureHealthFillVisible();
+    }
+
+    private void UpdateMatchTimer()
+    {
+        if (matchTimerText == null)
+        {
+            return;
+        }
+
+        int elapsedSeconds = OnlineMatchStats.GetMatchElapsedSeconds();
+        int minutes = elapsedSeconds / 60;
+        int seconds = elapsedSeconds % 60;
+        matchTimerText.text = $"{minutes:00}:{seconds:00}";
     }
 
     private void EnsureHealthFillVisible()

@@ -11,6 +11,12 @@ public class Spawner : MonoBehaviour
     [SerializeField] private Gate[] gatesToOpen;
     [SerializeField] private bool projectSpawnPointDownToNavMesh = true;
     [SerializeField] private float navMeshProjectionDistance = 20f;
+    [Header("Difficulty Scaling")]
+    [SerializeField] private bool enableDifficultyScaling = true;
+    [SerializeField] private float difficultyPerWave = 0.2f;
+    [SerializeField] private float difficultyPerMinute = 0.05f;
+    [SerializeField] private float difficultyPerExtraPlayer = 0.15f;
+    [SerializeField] private float maxDifficultyMultiplier = 3f;
 
     private List<SpawnPoint> spawnPointList;
 
@@ -23,6 +29,7 @@ public class Spawner : MonoBehaviour
     public bool IsCleared => hasCleared;
     public event Action<Spawner> Cleared;
     private int NetworkId => networkId != 0 ? networkId : ComputeStableNetworkId();
+    public int NetworkIdValue => NetworkId;
 
     private void Awake()
     {
@@ -154,6 +161,7 @@ public class Spawner : MonoBehaviour
 
             aliveEnemyCount++;
             spawnedCharacter.Died += OnSpawnedCharacterDied;
+            ApplyDifficultyToSpawnedCharacter(spawnedCharacter, null);
             RefreshEnemyTarget(spawnedCharacter);
             spawnedCharacter.PlaySpawnDissolve();
         }
@@ -227,6 +235,7 @@ public class Spawner : MonoBehaviour
             aliveEnemyCount++;
             spawnedCount++;
             spawnedCharacter.Died += OnSpawnedCharacterDied;
+            ApplyDifficultyToSpawnedCharacter(spawnedCharacter, spawnedObject);
             RefreshEnemyTarget(spawnedCharacter);
             Debug.Log($"Spawner[{NetworkId}] '{name}': spawned '{spawnedObject.name}'. aliveEnemyCount={aliveEnemyCount}.");
         }
@@ -266,8 +275,90 @@ public class Spawner : MonoBehaviour
 
         aliveEnemyCount++;
         spawnedCharacter.Died += OnSpawnedCharacterDied;
+        ApplyDifficultyToSpawnedCharacter(spawnedCharacter, null);
         RefreshEnemyTarget(spawnedCharacter);
         spawnedCharacter.PlaySpawnDissolve();
+    }
+
+    private void ApplyDifficultyToSpawnedCharacter(Character spawnedCharacter, NetworkObject spawnedNetworkObject)
+    {
+        if (!enableDifficultyScaling || spawnedCharacter == null)
+        {
+            return;
+        }
+
+        float multiplier = CalculateDifficultyMultiplier();
+
+        FusionEnemyAvatar enemyAvatar = spawnedNetworkObject != null
+            ? spawnedNetworkObject.GetComponent<FusionEnemyAvatar>()
+            : spawnedCharacter.GetComponent<FusionEnemyAvatar>();
+
+        if (enemyAvatar != null && enemyAvatar.Object != null && enemyAvatar.Object.IsValid)
+        {
+            enemyAvatar.ApplyDifficulty(NetworkId, multiplier);
+            return;
+        }
+
+        Health spawnedHealth = spawnedCharacter.GetComponent<Health>();
+        if (spawnedHealth != null)
+        {
+            spawnedHealth.ApplyMaxHealthMultiplier(multiplier, true);
+        }
+
+        DamageCaster spawnedDamageCaster = spawnedCharacter.GetComponentInChildren<DamageCaster>(true);
+        if (spawnedDamageCaster != null)
+        {
+            spawnedDamageCaster.ApplyDamageMultiplier(multiplier);
+        }
+
+        Enemy_02_shoot rangedAttack = spawnedCharacter.GetComponent<Enemy_02_shoot>();
+        if (rangedAttack != null)
+        {
+            rangedAttack.ApplyDamageMultiplier(multiplier);
+        }
+
+        float speedMultiplier = Mathf.Lerp(1f, multiplier, 0.35f);
+        spawnedCharacter.ApplyRuntimeMoveSpeedMultiplier(speedMultiplier);
+
+        Debug.Log(
+            $"Spawner[{NetworkId}] '{name}': applied offline difficulty multiplier {multiplier:0.00} " +
+            $"to '{spawnedCharacter.name}'."
+        );
+    }
+
+    private float CalculateDifficultyMultiplier()
+    {
+        if (!enableDifficultyScaling)
+        {
+            return 1f;
+        }
+
+        int waveIndex = Mathf.Max(0, NetworkId - 1);
+        int elapsedSeconds = OnlineMatchStats.GetMatchElapsedSeconds();
+        float elapsedMinutes = elapsedSeconds / 60f;
+        int extraPlayers = Mathf.Max(0, GetExpectedPlayerCount() - 1);
+
+        float multiplier = 1f
+            + waveIndex * Mathf.Max(0f, difficultyPerWave)
+            + elapsedMinutes * Mathf.Max(0f, difficultyPerMinute)
+            + extraPlayers * Mathf.Max(0f, difficultyPerExtraPlayer);
+
+        return Mathf.Clamp(multiplier, 1f, Mathf.Max(1f, maxDifficultyMultiplier));
+    }
+
+    private int GetExpectedPlayerCount()
+    {
+        if (OnlineRoomSession.ExpectedMatchPlayerCount > 0)
+        {
+            return OnlineRoomSession.ExpectedMatchPlayerCount;
+        }
+
+        if (OnlineRoomSession.Players != null && OnlineRoomSession.Players.Count > 0)
+        {
+            return OnlineRoomSession.Players.Count;
+        }
+
+        return Mathf.Max(1, FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None).Length);
     }
 
     private void RefreshEnemyTarget(Character spawnedCharacter)

@@ -61,6 +61,7 @@ public abstract class Character : MonoBehaviour
     private bool hasDeathDropPosition;
     private bool suppressNextDeathDissolve;
     private Vector3 deathDropPosition;
+    private float baseMoveSpeed;
 
 
     public CharacterState CurrentState { get; private set; } = CharacterState.Idle;
@@ -93,6 +94,7 @@ public abstract class Character : MonoBehaviour
 
         rb = characterController == null ? attachedRigidbody : null;
         animator = GetComponent<Animator>();
+        baseMoveSpeed = moveSpeed;
     }
 
     protected virtual void Start()
@@ -643,6 +645,17 @@ public abstract class Character : MonoBehaviour
         {
             damageCaster.DisableDamageCaster();
         }
+    }
+
+    public virtual void ApplyRuntimeMoveSpeedMultiplier(float multiplier)
+    {
+        float safeMultiplier = Mathf.Max(0.1f, multiplier);
+        if (baseMoveSpeed <= 0f)
+        {
+            baseMoveSpeed = moveSpeed;
+        }
+
+        moveSpeed = baseMoveSpeed * safeMultiplier;
     }
 
     public void SuppressNextDeathDissolve()

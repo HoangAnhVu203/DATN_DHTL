@@ -33,8 +33,12 @@ public class FusionEnemyAvatar : NetworkBehaviour
     private NavMeshPath reusablePath;
     private int lastDamageSourceId;
     private double lastDamageTime = -999d;
+    private float lastAppliedDifficultyMultiplier = -1f;
 
     private const double DuplicateDamageLockSeconds = 0.3d;
+
+    [Networked] public int WaveIndex { get; private set; }
+    [Networked] public float DifficultyMultiplier { get; private set; }
 
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
@@ -51,6 +55,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         ResetProxyAnimationTracking();
         reusablePath ??= new NavMeshPath();
         ApplyAuthorityState();
+        ApplyNetworkDifficultyToLocal();
     }
 
     private void OnEnable()
@@ -82,6 +87,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         ApplyAuthorityState();
+        ApplyNetworkDifficultyToLocal();
     }
 
     public override void FixedUpdateNetwork()
@@ -132,6 +138,24 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
         RPC_ApplyDamage(damage, attackPosition, damageSourceId, attacker);
         return true;
+    }
+
+    public void ApplyDifficulty(int waveIndex, float multiplier)
+    {
+        if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
+        {
+            return;
+        }
+
+        WaveIndex = Mathf.Max(0, waveIndex);
+        DifficultyMultiplier = Mathf.Max(1f, multiplier);
+        ApplyNetworkDifficultyToLocal();
+        networkHealth?.ForceSyncNow();
+
+        Debug.Log(
+            $"FusionEnemyAvatar: applied difficulty. wave={WaveIndex}, " +
+            $"multiplier={DifficultyMultiplier:0.00}, enemy='{name}'."
+        );
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -318,6 +342,43 @@ public class FusionEnemyAvatar : NetworkBehaviour
         if (health == null)
         {
             health = GetComponent<Health>();
+        }
+    }
+
+    private void ApplyNetworkDifficultyToLocal()
+    {
+        if (Object != null && Object.IsValid && !Object.HasStateAuthority)
+        {
+            return;
+        }
+
+        float multiplier = Mathf.Max(1f, DifficultyMultiplier);
+        if (Mathf.Approximately(lastAppliedDifficultyMultiplier, multiplier))
+        {
+            return;
+        }
+
+        lastAppliedDifficultyMultiplier = multiplier;
+
+        if (health != null)
+        {
+            health.ApplyMaxHealthMultiplier(multiplier, true);
+        }
+
+        if (damageCaster != null)
+        {
+            damageCaster.ApplyDamageMultiplier(multiplier);
+        }
+
+        if (rangedAttack != null)
+        {
+            rangedAttack.ApplyDamageMultiplier(multiplier);
+        }
+
+        if (enemy != null)
+        {
+            float speedMultiplier = Mathf.Lerp(1f, multiplier, 0.35f);
+            enemy.ApplyRuntimeMoveSpeedMultiplier(speedMultiplier);
         }
     }
 
