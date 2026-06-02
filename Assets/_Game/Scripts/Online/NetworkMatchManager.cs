@@ -10,6 +10,8 @@ public class NetworkMatchManager : MonoBehaviour
     [SerializeField] private float evaluationStartDelay = 2f;
     [SerializeField] private float evaluationInterval = 0.25f;
     [SerializeField] private bool requireExpectedPlayersBeforeLose = true;
+    [SerializeField] private bool enableMatchTimeLimit = true;
+    [SerializeField] private int matchTimeLimitSeconds = 300;
 
     private float nextEvaluationTime;
     private float evaluationAllowedTime;
@@ -125,6 +127,16 @@ public class NetworkMatchManager : MonoBehaviour
             return;
         }
 
+        if (HasMatchTimeExpired())
+        {
+            Debug.Log(
+                $"NetworkMatchManager: match time limit reached " +
+                $"({OnlineMatchStats.GetMatchElapsedSeconds()}/{matchTimeLimitSeconds}s) and spawners are not fully cleared."
+            );
+            FinishMatch(GameState.Lose);
+            return;
+        }
+
         if (AreAllPlayersUnableToContinue())
         {
             FinishMatch(GameState.Lose);
@@ -215,6 +227,16 @@ public class NetworkMatchManager : MonoBehaviour
         }
 
         return validSpawnerCount > 0;
+    }
+
+    private bool HasMatchTimeExpired()
+    {
+        if (!enableMatchTimeLimit || matchTimeLimitSeconds <= 0)
+        {
+            return false;
+        }
+
+        return OnlineMatchStats.GetMatchElapsedSeconds() >= matchTimeLimitSeconds;
     }
 
     private bool AreAllPlayersUnableToContinue()

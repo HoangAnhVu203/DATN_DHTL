@@ -725,11 +725,12 @@ MonoBehaviour:
   isDestroyOnClose: 0
   attackButton: {fileID: 2265503481437360523}
   slideButton: {fileID: 248204448385416340}
-  reviveButton: {fileID: 0}
+  reviveButton: {fileID: 4651772087423325646}
   reviveProgressImage: {fileID: 0}
   reviveButtonText: {fileID: 0}
   healthSlider: {fileID: 0}
-  coinText: {fileID: 0}
+  coinText: {fileID: 7299213007953701768}
+  matchTimerText: {fileID: 2604410986914233797}
   reviveHoldDuration: 3
 --- !u!1 &6014146937770154705
 GameObject:

@@ -20,10 +20,10 @@ public class PanelGamePlay : UICanvas
     [SerializeField] private Button slideButton;
     [SerializeField] private Button reviveButton;
     [SerializeField] private Image reviveProgressImage;
-    [SerializeField] private TMP_Text reviveButtonText;
+    [SerializeField] private Text reviveButtonText;
     [SerializeField] private Slider healthSlider;
     [SerializeField] private TMP_Text coinText;
-    [SerializeField] private TMP_Text matchTimerText;
+    [SerializeField] private Text matchTimerText;
     [SerializeField] private float reviveHoldDuration = 3f;
 
     private Player player;
@@ -205,7 +205,7 @@ public class PanelGamePlay : UICanvas
         {
             GameObject timerTextObject = FindChildByName("MatchTimerText");
             matchTimerText = timerTextObject != null
-                ? timerTextObject.GetComponent<TMP_Text>()
+                ? timerTextObject.GetComponent<Text>()
                 : null;
         }
 
@@ -231,7 +231,7 @@ public class PanelGamePlay : UICanvas
 
             if (reviveButtonText == null)
             {
-                reviveButtonText = reviveButton.GetComponentInChildren<TMP_Text>(true);
+                reviveButtonText = reviveButton.GetComponentInChildren<Text>(true);
             }
         }
     }

@@ -3040,6 +3040,11 @@ MonoBehaviour:
   - {fileID: 132083056}
   projectSpawnPointDownToNavMesh: 1
   navMeshProjectionDistance: 20
+  enableDifficultyScaling: 1
+  difficultyPerWave: 0.2
+  difficultyPerMinute: 0.05
+  difficultyPerExtraPlayer: 0.15
+  maxDifficultyMultiplier: 3
   collider: {fileID: 907145308}
 --- !u!65 &907145308
 BoxCollider:
@@ -4316,6 +4321,11 @@ MonoBehaviour:
   - {fileID: 446459398}
   projectSpawnPointDownToNavMesh: 1
   navMeshProjectionDistance: 20
+  enableDifficultyScaling: 1
+  difficultyPerWave: 0.2
+  difficultyPerMinute: 0.05
+  difficultyPerExtraPlayer: 0.15
+  maxDifficultyMultiplier: 3
   collider: {fileID: 1623299063}
 --- !u!65 &1623299063
 BoxCollider:
@@ -4458,6 +4468,11 @@ MonoBehaviour:
   - {fileID: 1212030289}
   projectSpawnPointDownToNavMesh: 1
   navMeshProjectionDistance: 20
+  enableDifficultyScaling: 1
+  difficultyPerWave: 0.2
+  difficultyPerMinute: 0.05
+  difficultyPerExtraPlayer: 0.15
+  maxDifficultyMultiplier: 3
   collider: {fileID: 1680992166}
 --- !u!114 &1708244650
 MonoBehaviour:
