@@ -33,6 +33,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     [SerializeField] private float attackDuration = 0.65f;
     [SerializeField] private float attackDamageDelay = 0.15f;
     [SerializeField] private float attackDamageDuration = 0.25f;
+    [SerializeField] private float hurtMovementLockDuration = 0.45f;
     [SerializeField] private float slideDuration = 0.5f;
     [SerializeField] private float slideDistance = 3f;
     [SerializeField] private bool setCameraFollowTarget = true;
@@ -74,6 +75,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private float attackTimer;
     private float attackDamageDelayTimer;
     private float attackDamageTimer;
+    private float hurtMovementLockTimer;
     private float slideTimer;
     private Vector3 slideDirection;
     private Vector3 smoothedMoveDirection;
@@ -982,14 +984,18 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         verticalVelocity += gravity * deltaTime;
 
-        Vector3 targetMoveDirection = slideTimer > 0f ? slideDirection : GetMoveInput();
+        UpdateHurtMovementLock(deltaTime);
+
+        bool movementLocked = IsInputMovementLocked();
+        Vector3 targetMoveDirection = !movementLocked && slideTimer > 0f ? slideDirection : GetMoveInput();
         targetMoveDirection.y = 0f;
         targetMoveDirection = Vector3.ClampMagnitude(targetMoveDirection, 1f);
 
         float currentMoveSpeed = moveSpeed;
-        if (attackTimer > 0f)
+        if (movementLocked)
         {
             targetMoveDirection = Vector3.zero;
+            smoothedMoveDirection = Vector3.zero;
         }
         else if (slideTimer > 0f)
         {
@@ -1044,6 +1050,35 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (attackTimer > 0f)
         {
             attackTimer = Mathf.Max(attackTimer - deltaTime, 0f);
+        }
+    }
+
+    private bool IsInputMovementLocked()
+    {
+        return IsDead()
+            || IsDowned
+            || IsEliminated
+            || attackTimer > 0f
+            || hurtMovementLockTimer > 0f;
+    }
+
+    private void UpdateHurtMovementLock(float deltaTime)
+    {
+        if (hurtMovementLockTimer <= 0f)
+        {
+            return;
+        }
+
+        hurtMovementLockTimer = Mathf.Max(hurtMovementLockTimer - deltaTime, 0f);
+        if (hurtMovementLockTimer > 0f)
+        {
+            return;
+        }
+
+        Character character = player != null ? player : GetComponent<Character>();
+        if (character != null && character.CurrentState == CharacterState.Hurt && !IsDead())
+        {
+            character.SwitchToState(CharacterState.Idle);
         }
     }
 
@@ -1179,7 +1214,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void TryStartAttack()
     {
-        if (IsDead() || attackTimer > 0f || slideTimer > 0f)
+        if (IsInputMovementLocked() || slideTimer > 0f)
         {
             return;
         }
@@ -1193,7 +1228,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
     private void TryStartSlide()
     {
-        if (IsDead() || attackTimer > 0f || slideTimer > 0f)
+        if (IsInputMovementLocked() || slideTimer > 0f)
         {
             return;
         }
@@ -1250,6 +1285,14 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    public void AttackAnimationEnds()
+    {
+        attackTimer = 0f;
+        attackDamageDelayTimer = 0f;
+        attackDamageTimer = 0f;
+        damageCaster?.EndControlledDamageWindow();
+    }
+
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_PlaySlide()
     {
@@ -1282,6 +1325,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (player != null)
         {
             player.ApplyDamage(damage, attackPosition);
+            StartHurtMovementLock();
             networkHealth?.ForceSyncNow();
             return;
         }
@@ -1290,8 +1334,21 @@ public class FusionPlayerAvatar : NetworkBehaviour
         if (character != null)
         {
             character.ApplyDamage(damage, attackPosition);
+            StartHurtMovementLock();
             networkHealth?.ForceSyncNow();
         }
+    }
+
+    private void StartHurtMovementLock()
+    {
+        if (IsDead())
+        {
+            return;
+        }
+
+        hurtMovementLockTimer = Mathf.Max(hurtMovementLockDuration, 0f);
+        smoothedMoveDirection = Vector3.zero;
+        NetworkedSpeed = 0f;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

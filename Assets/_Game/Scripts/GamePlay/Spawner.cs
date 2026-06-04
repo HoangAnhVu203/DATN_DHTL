@@ -17,6 +17,8 @@ public class Spawner : MonoBehaviour
     [SerializeField] private float difficultyPerMinute = 0.05f;
     [SerializeField] private float difficultyPerExtraPlayer = 0.15f;
     [SerializeField] private float maxDifficultyMultiplier = 3f;
+    [SerializeField] private bool scaleEnemyDamage;
+    [SerializeField] private float maxDamageMultiplier = 1.5f;
 
     private List<SpawnPoint> spawnPointList;
 
@@ -288,6 +290,7 @@ public class Spawner : MonoBehaviour
         }
 
         float multiplier = CalculateDifficultyMultiplier();
+        float damageMultiplier = CalculateDamageMultiplier(multiplier);
 
         FusionEnemyAvatar enemyAvatar = spawnedNetworkObject != null
             ? spawnedNetworkObject.GetComponent<FusionEnemyAvatar>()
@@ -295,7 +298,7 @@ public class Spawner : MonoBehaviour
 
         if (enemyAvatar != null && enemyAvatar.Object != null && enemyAvatar.Object.IsValid)
         {
-            enemyAvatar.ApplyDifficulty(NetworkId, multiplier);
+            enemyAvatar.ApplyDifficulty(NetworkId, multiplier, damageMultiplier);
             return;
         }
 
@@ -308,22 +311,33 @@ public class Spawner : MonoBehaviour
         DamageCaster spawnedDamageCaster = spawnedCharacter.GetComponentInChildren<DamageCaster>(true);
         if (spawnedDamageCaster != null)
         {
-            spawnedDamageCaster.ApplyDamageMultiplier(multiplier);
+            spawnedDamageCaster.ApplyDamageMultiplier(damageMultiplier);
         }
 
         Enemy_02_shoot rangedAttack = spawnedCharacter.GetComponent<Enemy_02_shoot>();
         if (rangedAttack != null)
         {
-            rangedAttack.ApplyDamageMultiplier(multiplier);
+            rangedAttack.ApplyDamageMultiplier(damageMultiplier);
         }
 
         float speedMultiplier = Mathf.Lerp(1f, multiplier, 0.35f);
         spawnedCharacter.ApplyRuntimeMoveSpeedMultiplier(speedMultiplier);
 
         Debug.Log(
-            $"Spawner[{NetworkId}] '{name}': applied offline difficulty multiplier {multiplier:0.00} " +
+            $"Spawner[{NetworkId}] '{name}': applied offline difficulty multiplier {multiplier:0.00}, " +
+            $"damage multiplier {damageMultiplier:0.00} " +
             $"to '{spawnedCharacter.name}'."
         );
+    }
+
+    private float CalculateDamageMultiplier(float difficultyMultiplier)
+    {
+        if (!scaleEnemyDamage)
+        {
+            return 1f;
+        }
+
+        return Mathf.Clamp(difficultyMultiplier, 1f, Mathf.Max(1f, maxDamageMultiplier));
     }
 
     private float CalculateDifficultyMultiplier()

@@ -34,11 +34,13 @@ public class FusionEnemyAvatar : NetworkBehaviour
     private int lastDamageSourceId;
     private double lastDamageTime = -999d;
     private float lastAppliedDifficultyMultiplier = -1f;
+    private float lastAppliedDamageMultiplier = -1f;
 
     private const double DuplicateDamageLockSeconds = 0.3d;
 
     [Networked] public int WaveIndex { get; private set; }
     [Networked] public float DifficultyMultiplier { get; private set; }
+    [Networked] public float DamageMultiplier { get; private set; }
 
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
@@ -140,7 +142,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         return true;
     }
 
-    public void ApplyDifficulty(int waveIndex, float multiplier)
+    public void ApplyDifficulty(int waveIndex, float multiplier, float damageMultiplier)
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
         {
@@ -149,12 +151,14 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
         WaveIndex = Mathf.Max(0, waveIndex);
         DifficultyMultiplier = Mathf.Max(1f, multiplier);
+        DamageMultiplier = Mathf.Max(1f, damageMultiplier);
         ApplyNetworkDifficultyToLocal();
         networkHealth?.ForceSyncNow();
 
         Debug.Log(
             $"FusionEnemyAvatar: applied difficulty. wave={WaveIndex}, " +
-            $"multiplier={DifficultyMultiplier:0.00}, enemy='{name}'."
+            $"multiplier={DifficultyMultiplier:0.00}, damageMultiplier={DamageMultiplier:0.00}, " +
+            $"enemy='{name}'."
         );
     }
 
@@ -353,12 +357,15 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
 
         float multiplier = Mathf.Max(1f, DifficultyMultiplier);
-        if (Mathf.Approximately(lastAppliedDifficultyMultiplier, multiplier))
+        float damageMultiplier = DamageMultiplier > 0f ? Mathf.Max(1f, DamageMultiplier) : 1f;
+        if (Mathf.Approximately(lastAppliedDifficultyMultiplier, multiplier)
+            && Mathf.Approximately(lastAppliedDamageMultiplier, damageMultiplier))
         {
             return;
         }
 
         lastAppliedDifficultyMultiplier = multiplier;
+        lastAppliedDamageMultiplier = damageMultiplier;
 
         if (health != null)
         {
@@ -367,12 +374,12 @@ public class FusionEnemyAvatar : NetworkBehaviour
 
         if (damageCaster != null)
         {
-            damageCaster.ApplyDamageMultiplier(multiplier);
+            damageCaster.ApplyDamageMultiplier(damageMultiplier);
         }
 
         if (rangedAttack != null)
         {
-            rangedAttack.ApplyDamageMultiplier(multiplier);
+            rangedAttack.ApplyDamageMultiplier(damageMultiplier);
         }
 
         if (enemy != null)

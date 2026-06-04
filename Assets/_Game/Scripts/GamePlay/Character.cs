@@ -566,7 +566,7 @@ public abstract class Character : MonoBehaviour
 
     public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())
     {
-        if (isInvincible)
+        if (CanBecomeInvincible && isInvincible)
         {
             return;
         }
