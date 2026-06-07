@@ -4,10 +4,13 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Enemy : Character
 {
+    private static readonly System.Collections.Generic.List<Enemy> ActiveEnemies = new();
+
     private const string PlayerTag = "Player";
     private const string AttackParameter = "Attack";
 
     [SerializeField] private Transform target;
+    [SerializeField] private bool ignoreOtherEnemyBodyCollisions = true;
     [SerializeField] private float stoppingDistance = 1.5f;
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackDuration = 0.65f;
@@ -38,6 +41,16 @@ public class Enemy : Character
         reusablePath = new NavMeshPath();
 
         RefreshClosestPlayerTarget();
+    }
+
+    private void OnEnable()
+    {
+        RegisterEnemyBodyCollisionIgnores();
+    }
+
+    private void OnDisable()
+    {
+        ActiveEnemies.Remove(this);
     }
 
     public override void ApplyRuntimeMoveSpeedMultiplier(float multiplier)
@@ -357,5 +370,58 @@ public class Enemy : Character
         {
             enemyCollider.enabled = false;
         }
+    }
+
+    private void RegisterEnemyBodyCollisionIgnores()
+    {
+        if (!ignoreOtherEnemyBodyCollisions || ActiveEnemies.Contains(this))
+        {
+            return;
+        }
+
+        Collider[] ownColliders = GetComponentsInChildren<Collider>(true);
+
+        foreach (Enemy otherEnemy in ActiveEnemies)
+        {
+            if (otherEnemy == null)
+            {
+                continue;
+            }
+
+            IgnoreBodyCollisions(ownColliders, otherEnemy.GetComponentsInChildren<Collider>(true));
+        }
+
+        ActiveEnemies.Add(this);
+    }
+
+    private static void IgnoreBodyCollisions(Collider[] firstColliders, Collider[] secondColliders)
+    {
+        if (firstColliders == null || secondColliders == null)
+        {
+            return;
+        }
+
+        foreach (Collider first in firstColliders)
+        {
+            if (!CanIgnoreEnemyCollision(first))
+            {
+                continue;
+            }
+
+            foreach (Collider second in secondColliders)
+            {
+                if (!CanIgnoreEnemyCollision(second) || first == second)
+                {
+                    continue;
+                }
+
+                Physics.IgnoreCollision(first, second, true);
+            }
+        }
+    }
+
+    private static bool CanIgnoreEnemyCollision(Collider collider)
+    {
+        return collider != null && !collider.isTrigger;
     }
 }
