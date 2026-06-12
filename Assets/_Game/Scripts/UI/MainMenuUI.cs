@@ -11,9 +11,13 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private PanelLoading loadingPanelPrefab;
     [SerializeField] private Button informationPlayerButton;
     [SerializeField] private Button matchHistoryButton;
+    [SerializeField] private Button logoutButton;
+    [SerializeField] private PanelLogin panelLogin;
+    [SerializeField] private TMP_Text displayNameText;
     [SerializeField] private TMP_Text coinText;
 
     private bool isLoading;
+    private bool isLoggingOut;
 
     private void Awake()
     {
@@ -41,6 +45,26 @@ public class MainMenuUI : MonoBehaviour
             matchHistoryButton.onClick.AddListener(OpenMatchHistoryPanel);
         }
 
+        if (logoutButton == null)
+        {
+            logoutButton = FindButtonByNames("LogoutBtn", "ButtonLogout", "LogoutButton", "Logout");
+        }
+
+        if (logoutButton != null)
+        {
+            logoutButton.onClick.AddListener(Logout);
+        }
+
+        if (panelLogin == null)
+        {
+            panelLogin = FindFirstObjectByType<PanelLogin>(FindObjectsInactive.Include);
+        }
+
+        if (displayNameText == null)
+        {
+            displayNameText = FindTextByNames("PlayerDisplayName", "DisplayName", "DisplayNameText");
+        }
+
         if (coinText == null)
         {
             coinText = FindTextByNames("CoinTxt", "CoinText", "PlayerCoinText");
@@ -60,6 +84,11 @@ public class MainMenuUI : MonoBehaviour
         if (matchHistoryButton != null)
         {
             matchHistoryButton.onClick.RemoveListener(OpenMatchHistoryPanel);
+        }
+
+        if (logoutButton != null)
+        {
+            logoutButton.onClick.RemoveListener(Logout);
         }
 
         SupabaseSession.CoinChanged -= OnSessionCoinChanged;
@@ -106,6 +135,116 @@ public class MainMenuUI : MonoBehaviour
         }
 
         PanelMatchHistory.OpenFromScene();
+    }
+
+    public void Logout()
+    {
+        if (isLoggingOut)
+        {
+            return;
+        }
+
+        StartCoroutine(LogoutRoutine());
+    }
+
+    private IEnumerator LogoutRoutine()
+    {
+        isLoggingOut = true;
+        SetMenuButtonsInteractable(false);
+        OnlineMatchLoadingOverlay.Show(0.1f);
+
+        AuthService authService = FindFirstObjectByType<AuthService>();
+        bool logoutCompleted = false;
+
+        if (authService != null)
+        {
+            yield return authService.SignOut((success, message) =>
+            {
+                logoutCompleted = success;
+                Debug.Log(message);
+            });
+        }
+        else
+        {
+            OnlineRoomSession.Clear();
+            SupabaseSession.Clear();
+            logoutCompleted = true;
+        }
+
+        OnlineMatchLoadingOverlay.SetProgress(1f);
+        OnlineMatchLoadingOverlay.Hide();
+
+        RefreshLoggedOutView();
+        SetMenuButtonsInteractable(true);
+        isLoggingOut = false;
+
+        if (!logoutCompleted)
+        {
+            Debug.LogWarning("Logout did not complete cleanly, but local session was cleared.");
+        }
+    }
+
+    private void RefreshLoggedOutView()
+    {
+        if (panelLogin == null)
+        {
+            panelLogin = FindFirstObjectByType<PanelLogin>(FindObjectsInactive.Include);
+        }
+
+        if (panelLogin != null)
+        {
+            panelLogin.ResetForLoggedOut();
+            panelLogin.gameObject.SetActive(true);
+        }
+
+        ClearRoomUiState();
+
+        if (displayNameText != null)
+        {
+            displayNameText.text = string.Empty;
+        }
+
+        PanelInformation.RefreshInformationPlayerAvatar();
+        RefreshCoinText();
+    }
+
+    private void ClearRoomUiState()
+    {
+        PanelRoomTest[] roomPanels = FindObjectsByType<PanelRoomTest>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (PanelRoomTest roomPanel in roomPanels)
+        {
+            if (roomPanel != null)
+            {
+                roomPanel.ClearTransientText();
+            }
+        }
+
+        PanelRoomMatch[] roomMatchPanels = FindObjectsByType<PanelRoomMatch>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (PanelRoomMatch roomMatchPanel in roomMatchPanels)
+        {
+            if (roomMatchPanel != null && roomMatchPanel.gameObject.activeInHierarchy)
+            {
+                roomMatchPanel.CloseDirectly();
+            }
+        }
+    }
+
+    private void SetMenuButtonsInteractable(bool interactable)
+    {
+        if (informationPlayerButton != null)
+        {
+            informationPlayerButton.interactable = interactable;
+        }
+
+        if (matchHistoryButton != null)
+        {
+            matchHistoryButton.interactable = interactable;
+        }
+
+        if (logoutButton != null)
+        {
+            logoutButton.interactable = interactable;
+        }
     }
 
     private Button FindButtonByNames(params string[] objectNames)

@@ -21,10 +21,15 @@ public class PanelGamePlay : UICanvas
     [SerializeField] private Button reviveButton;
     [SerializeField] private Image reviveProgressImage;
     [SerializeField] private Text reviveButtonText;
+    [SerializeField] private Button testWinButton;
     [SerializeField] private Slider healthSlider;
     [SerializeField] private TMP_Text coinText;
     [SerializeField] private Text matchTimerText;
     [SerializeField] private float reviveHoldDuration = 3f;
+    [SerializeField] private bool enableTestWinButton;
+    [SerializeField] private bool createTestWinButtonAtRuntime;
+    [SerializeField] private int testWinHostDamage = 9999;
+    [SerializeField] private int testWinHostKills = 99;
 
     private Player player;
     private FusionPlayerAvatar fusionPlayerAvatar;
@@ -79,6 +84,7 @@ public class PanelGamePlay : UICanvas
 
         BindReviveButtonEvents();
         SetReviveButtonVisible(false);
+        BindTestWinButton();
     }
 
     private void OnDisable()
@@ -93,6 +99,11 @@ public class PanelGamePlay : UICanvas
         if (slideButton != null)
         {
             slideButton.onClick.RemoveListener(OnSlideButtonClicked);
+        }
+
+        if (testWinButton != null)
+        {
+            testWinButton.onClick.RemoveListener(OnTestWinButtonClicked);
         }
 
         reviveButtonHeld = false;
@@ -158,6 +169,12 @@ public class PanelGamePlay : UICanvas
         {
             player.Slide();
         }
+    }
+
+    public void OnTestWinButtonClicked()
+    {
+        OnlineMatchStats.AddTestWinStatsToHost(testWinHostDamage, testWinHostKills);
+        NetworkMatchManager.Ensure().ForceVictoryForDebug();
     }
 
     private Button FindButtonByName(string buttonName)
@@ -234,6 +251,87 @@ public class PanelGamePlay : UICanvas
                 reviveButtonText = reviveButton.GetComponentInChildren<Text>(true);
             }
         }
+
+        if (testWinButton == null)
+        {
+            testWinButton = FindButtonByName("TestWinBtn")
+                ?? FindButtonByName("ButtonTestWin")
+                ?? FindButtonByName("TestWinButton");
+        }
+    }
+
+    private void BindTestWinButton()
+    {
+        if (!enableTestWinButton)
+        {
+            if (testWinButton != null)
+            {
+                testWinButton.onClick.RemoveListener(OnTestWinButtonClicked);
+                testWinButton.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
+        if (testWinButton == null && createTestWinButtonAtRuntime)
+        {
+            testWinButton = CreateRuntimeTestWinButton();
+        }
+
+        if (testWinButton == null)
+        {
+            return;
+        }
+
+        testWinButton.onClick.RemoveListener(OnTestWinButtonClicked);
+        testWinButton.onClick.AddListener(OnTestWinButtonClicked);
+    }
+
+    private Button CreateRuntimeTestWinButton()
+    {
+        GameObject existing = FindChildByName("TestWinBtn");
+        if (existing != null && existing.TryGetComponent(out Button existingButton))
+        {
+            return existingButton;
+        }
+
+        GameObject buttonObject = new GameObject("TestWinBtn", typeof(RectTransform), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(transform, false);
+
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(1f, 1f);
+        buttonRect.anchorMax = new Vector2(1f, 1f);
+        buttonRect.pivot = new Vector2(1f, 1f);
+        buttonRect.anchoredPosition = new Vector2(-24f, -92f);
+        buttonRect.sizeDelta = new Vector2(140f, 42f);
+
+        Image buttonImage = buttonObject.GetComponent<Image>();
+        buttonImage.color = new Color(0.85f, 0.08f, 0.08f, 0.9f);
+
+        Button button = buttonObject.GetComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.highlightedColor = new Color(1f, 0.18f, 0.18f, 1f);
+        colors.pressedColor = new Color(0.55f, 0.02f, 0.02f, 1f);
+        button.colors = colors;
+
+        GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+        textObject.transform.SetParent(buttonObject.transform, false);
+
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        Text text = textObject.GetComponent<Text>();
+        text.text = "TEST WIN";
+        text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white;
+        text.fontSize = 18;
+        text.raycastTarget = false;
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        return button;
     }
 
     private GameObject FindChildByName(string childName)

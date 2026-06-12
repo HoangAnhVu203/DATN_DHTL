@@ -10,7 +10,6 @@ public class Enemy : Character
     private const string AttackParameter = "Attack";
 
     [SerializeField] private Transform target;
-    [SerializeField] private bool ignoreOtherEnemyBodyCollisions = true;
     [SerializeField] private float stoppingDistance = 1.5f;
     [SerializeField] private float attackRange = 1.5f;
     [SerializeField] private float attackDuration = 0.65f;
@@ -18,6 +17,8 @@ public class Enemy : Character
     [SerializeField] private float repathInterval = 0.2f;
     [SerializeField] private float targetRefreshInterval = 0.25f;
     [SerializeField] private float targetPathSampleDistance = 2f;
+    [SerializeField] private float enemySeparationRadius = 0.9f;
+    [SerializeField] private float enemySeparationWeight = 0.65f;
 
     private NavMeshAgent agent;
     private float nextRepathTime;
@@ -26,6 +27,7 @@ public class Enemy : Character
     private Vector3 lastMoveDirection;
     private NavMeshPath reusablePath;
     private float EffectiveAttackRange => Mathf.Max(attackRange, stoppingDistance);
+    protected override bool CanBecomeInvincible => false;
 
     protected override void Awake()
     {
@@ -45,7 +47,7 @@ public class Enemy : Character
 
     private void OnEnable()
     {
-        RegisterEnemyBodyCollisionIgnores();
+        RegisterActiveEnemy();
     }
 
     private void OnDisable()
@@ -120,7 +122,8 @@ public class Enemy : Character
             return lastMoveDirection;
         }
 
-        lastMoveDirection = direction.normalized;
+        Vector3 moveDirection = ApplyEnemySeparation(direction.normalized);
+        lastMoveDirection = moveDirection.sqrMagnitude > 0.001f ? moveDirection.normalized : direction.normalized;
         return lastMoveDirection;
     }
 
@@ -372,56 +375,63 @@ public class Enemy : Character
         }
     }
 
-    private void RegisterEnemyBodyCollisionIgnores()
+    private void RegisterActiveEnemy()
     {
-        if (!ignoreOtherEnemyBodyCollisions || ActiveEnemies.Contains(this))
+        ActiveEnemies.RemoveAll(enemy => enemy == null);
+
+        if (ActiveEnemies.Contains(this))
         {
             return;
-        }
-
-        Collider[] ownColliders = GetComponentsInChildren<Collider>(true);
-
-        foreach (Enemy otherEnemy in ActiveEnemies)
-        {
-            if (otherEnemy == null)
-            {
-                continue;
-            }
-
-            IgnoreBodyCollisions(ownColliders, otherEnemy.GetComponentsInChildren<Collider>(true));
         }
 
         ActiveEnemies.Add(this);
     }
 
-    private static void IgnoreBodyCollisions(Collider[] firstColliders, Collider[] secondColliders)
+    private Vector3 ApplyEnemySeparation(Vector3 desiredDirection)
     {
-        if (firstColliders == null || secondColliders == null)
+        float radius = Mathf.Max(0f, enemySeparationRadius);
+        if (radius <= 0f || enemySeparationWeight <= 0f)
         {
-            return;
+            return desiredDirection;
         }
 
-        foreach (Collider first in firstColliders)
+        Vector3 separation = Vector3.zero;
+        float radiusSqr = radius * radius;
+
+        for (int i = ActiveEnemies.Count - 1; i >= 0; i--)
         {
-            if (!CanIgnoreEnemyCollision(first))
+            Enemy otherEnemy = ActiveEnemies[i];
+            if (otherEnemy == null)
+            {
+                ActiveEnemies.RemoveAt(i);
+                continue;
+            }
+
+            if (otherEnemy == this || !otherEnemy.gameObject.activeInHierarchy)
             {
                 continue;
             }
 
-            foreach (Collider second in secondColliders)
+            Vector3 away = transform.position - otherEnemy.transform.position;
+            away.y = 0f;
+            float distanceSqr = away.sqrMagnitude;
+            if (distanceSqr <= 0.0001f || distanceSqr > radiusSqr)
             {
-                if (!CanIgnoreEnemyCollision(second) || first == second)
-                {
-                    continue;
-                }
-
-                Physics.IgnoreCollision(first, second, true);
+                continue;
             }
-        }
-    }
 
-    private static bool CanIgnoreEnemyCollision(Collider collider)
-    {
-        return collider != null && !collider.isTrigger;
+            float strength = 1f - Mathf.Sqrt(distanceSqr) / radius;
+            separation += away.normalized * strength;
+        }
+
+        if (separation.sqrMagnitude <= 0.0001f)
+        {
+            return desiredDirection;
+        }
+
+        return Vector3.ClampMagnitude(
+            desiredDirection + separation.normalized * enemySeparationWeight,
+            1f
+        );
     }
 }

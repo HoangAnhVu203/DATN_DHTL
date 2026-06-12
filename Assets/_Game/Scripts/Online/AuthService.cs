@@ -145,7 +145,53 @@ public class AuthService : MonoBehaviour
         callback?.Invoke(true, SupabaseSession.DisplayName);
     }
 
+    public IEnumerator SignOut(Action<bool, string> callback)
+    {
+        string accessToken = SupabaseSession.AccessToken;
+
+        if (config != null
+            && !string.IsNullOrWhiteSpace(config.FunctionUrl)
+            && !string.IsNullOrWhiteSpace(config.AnonKey)
+            && !string.IsNullOrWhiteSpace(accessToken))
+        {
+            yield return CleanupPlayerState(accessToken, "logout");
+        }
+
+        if (config != null
+            && !string.IsNullOrWhiteSpace(config.SupabaseUrl)
+            && !string.IsNullOrWhiteSpace(config.AnonKey)
+            && !string.IsNullOrWhiteSpace(accessToken))
+        {
+            string logoutUrl = $"{config.SupabaseUrl}/auth/v1/logout";
+            using UnityWebRequest logoutRequest = new UnityWebRequest(logoutUrl, "POST");
+            logoutRequest.uploadHandler = new UploadHandlerRaw(Array.Empty<byte>());
+            logoutRequest.downloadHandler = new DownloadHandlerBuffer();
+            logoutRequest.SetRequestHeader("Content-Type", "application/json");
+            logoutRequest.SetRequestHeader("apikey", config.AnonKey);
+            logoutRequest.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+
+            yield return logoutRequest.SendWebRequest();
+
+            string responseText = logoutRequest.downloadHandler != null ? logoutRequest.downloadHandler.text : string.Empty;
+            if (logoutRequest.responseCode < 200
+                || logoutRequest.responseCode >= 300
+                || logoutRequest.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"Supabase logout failed: {BuildErrorMessage(logoutRequest.responseCode, logoutRequest.error, responseText)}");
+            }
+        }
+
+        OnlineRoomSession.Clear();
+        SupabaseSession.Clear();
+        callback?.Invoke(true, "Đăng xuất thành công.");
+    }
+
     private IEnumerator CleanupPlayerStateAfterLogin()
+    {
+        yield return CleanupPlayerState(SupabaseSession.AccessToken, "login");
+    }
+
+    private IEnumerator CleanupPlayerState(string accessToken, string context)
     {
         string url = $"{config.FunctionUrl}/cleanup_player_state";
 
@@ -157,18 +203,18 @@ public class AuthService : MonoBehaviour
 
         request.SetRequestHeader("Content-Type", "application/json");
         request.SetRequestHeader("apikey", config.AnonKey);
-        request.SetRequestHeader("Authorization", $"Bearer {SupabaseSession.AccessToken}");
+        request.SetRequestHeader("Authorization", $"Bearer {accessToken}");
 
         yield return request.SendWebRequest();
 
         string responseText = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
         if (request.responseCode < 200 || request.responseCode >= 300 || request.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogWarning($"Cleanup after login failed: {BuildErrorMessage(request.responseCode, request.error, responseText)}");
+            Debug.LogWarning($"Cleanup during {context} failed: {BuildErrorMessage(request.responseCode, request.error, responseText)}");
             yield break;
         }
 
-        Debug.Log($"Cleanup after login completed: {responseText}");
+        Debug.Log($"Cleanup during {context} completed: {responseText}");
     }
 
     private IEnumerator LoadUserProfile(string userId, Action<UserProfile> callback)

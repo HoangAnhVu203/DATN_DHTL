@@ -57,6 +57,11 @@ public class PanelLogin : MonoBehaviour
 
     private void OnEnable()
     {
+        if (!SupabaseSession.IsLoggedIn)
+        {
+            ResetForLoggedOut();
+        }
+
         HideIfAlreadyLoggedIn();
     }
 
@@ -126,6 +131,23 @@ public class PanelLogin : MonoBehaviour
         OnlineMatchLoadingOverlay.SetProgress(1f);
         OnlineMatchLoadingOverlay.Hide();
         Debug.Log($"Logged in: {SupabaseSession.UserId} - {SupabaseSession.DisplayName}");
+    }
+
+    public void ResetForLoggedOut()
+    {
+        StopLoginLoading();
+        OnlineMatchLoadingOverlay.Hide();
+        isRegisterMode = false;
+        RefreshModeText();
+        ClearInputFields();
+        SetStatus(string.Empty);
+
+        if (loginButton != null)
+        {
+            loginButton.interactable = true;
+        }
+
+        SetToggleInteractable(true);
     }
 
     private void StartLoginLoading()
@@ -261,6 +283,19 @@ public class PanelLogin : MonoBehaviour
         isRegisterMode = !isRegisterMode;
         SetStatus(string.Empty);
         RefreshModeText();
+    }
+
+    private void ClearInputFields()
+    {
+        if (emailInput != null)
+        {
+            emailInput.text = string.Empty;
+        }
+
+        if (passwordInput != null)
+        {
+            passwordInput.text = string.Empty;
+        }
     }
 
     private void RefreshModeText()

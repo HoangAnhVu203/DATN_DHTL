@@ -119,6 +119,11 @@ public class NetworkMatchManager : MonoBehaviour
         ApplyResultToLocalGameManager(resultState);
     }
 
+    public void ForceVictoryForDebug()
+    {
+        FinishMatch(GameState.Victory);
+    }
+
     private void EvaluateMatchState()
     {
         if (AreAllSpawnersCleared())

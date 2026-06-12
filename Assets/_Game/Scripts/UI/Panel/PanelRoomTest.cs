@@ -16,6 +16,7 @@ public class PanelRoomTest : MonoBehaviour
     private void Awake()
     {
         ResolveSceneReferences();
+        ClearTransientText();
         createRoomButton.onClick.AddListener(OnCreateRoomClicked);
 
         if (joinRoomButton != null)
@@ -37,6 +38,7 @@ public class PanelRoomTest : MonoBehaviour
     private void OnCreateRoomClicked()
     {
         createRoomButton.interactable = false;
+        ClearRoomCodeText();
         SetStatus("Đang tạo phòng...");
 
         StartCoroutine(roomService.CreateRoom(4, OnCreateRoomCompleted));
@@ -58,6 +60,7 @@ public class PanelRoomTest : MonoBehaviour
         }
 
         SetButtonsInteractable(false);
+        ClearRoomCodeText();
         SetStatus("Đang vào phòng...");
 
         StartCoroutine(roomService.JoinRoom(roomCode, OnJoinRoomCompleted));
@@ -79,6 +82,7 @@ public class PanelRoomTest : MonoBehaviour
 
         Debug.Log($"Room created: {data.room_id} - {data.room_code}");
         EnterRoom(data);
+        ClearTransientText();
     }
 
     private void OnJoinRoomCompleted(bool success, RoomService.RoomData data, string error)
@@ -97,6 +101,26 @@ public class PanelRoomTest : MonoBehaviour
 
         Debug.Log($"Joined room: {data.room_id} - {data.room_code}");
         EnterRoom(data);
+        ClearTransientText();
+    }
+
+    public void ClearTransientText()
+    {
+        ClearRoomCodeText();
+        SetStatus(string.Empty);
+
+        if (joinRoomCodeInput != null)
+        {
+            joinRoomCodeInput.text = string.Empty;
+        }
+    }
+
+    private void ClearRoomCodeText()
+    {
+        if (roomCodeText != null)
+        {
+            roomCodeText.text = string.Empty;
+        }
     }
 
     private void SetStatus(string message)

@@ -76,6 +76,42 @@ public static class OnlineMatchStats
         }
     }
 
+    public static void AddTestWinStatsToHost(int damage, int kills)
+    {
+        EnsureStarted();
+
+        string hostUserId = OnlineRoomSession.HostId;
+        if (string.IsNullOrWhiteSpace(hostUserId))
+        {
+            hostUserId = SupabaseSession.UserId;
+        }
+
+        if (string.IsNullOrWhiteSpace(hostUserId))
+        {
+            Debug.LogWarning("OnlineMatchStats: cannot add test win stats because host user id is empty.");
+            return;
+        }
+
+        int safeDamage = Mathf.Max(0, damage);
+        int safeKills = Mathf.Max(0, kills);
+
+        if (safeDamage > 0)
+        {
+            FusionPlayerAvatar.BroadcastMatchStatEvent(StatEventType.Damage, hostUserId, safeDamage);
+        }
+
+        if (safeKills > 0)
+        {
+            FusionPlayerAvatar.BroadcastMatchStatEvent(StatEventType.Kill, hostUserId, safeKills);
+        }
+
+        MatchPlayerStats stats = GetOrCreate(hostUserId);
+        Debug.Log(
+            $"OnlineMatchStats: test win stats assigned to host={hostUserId}. " +
+            $"kills={stats.kills}, damage={stats.damageDealt}."
+        );
+    }
+
     public static MatchPlayerStats GetStats(string userId)
     {
         return GetOrCreate(userId);
@@ -119,7 +155,11 @@ public static class OnlineMatchStats
                 AddDamage(userId, amount);
                 break;
             case StatEventType.Kill:
-                AddKill(userId);
+                int killCount = Mathf.Max(1, amount);
+                for (int i = 0; i < killCount; i++)
+                {
+                    AddKill(userId);
+                }
                 break;
             case StatEventType.Down:
                 AddDown(userId);
