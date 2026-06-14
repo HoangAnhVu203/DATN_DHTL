@@ -61,11 +61,12 @@ public class EnemyVFXManager : MonoBehaviour
             return;
         }
 
-        Transform splashParent = vfxRoot != null ? vfxRoot : transform;
-        VisualEffect newSplashVFX = Instantiate(beingHitSplashVFX, splashParent);
-        newSplashVFX.transform.localPosition = new Vector3(0f, 2f, 0f);
-        newSplashVFX.transform.localRotation = beingHitSplashVFX.transform.localRotation;
-        newSplashVFX.transform.localScale = beingHitSplashVFX.transform.localScale;
+        Transform splashOrigin = vfxRoot != null ? vfxRoot : transform;
+        Vector3 splashPosition = splashOrigin.TransformPoint(new Vector3(0f, 2f, 0f));
+        Quaternion splashRotation = splashOrigin.rotation * beingHitSplashVFX.transform.localRotation;
+
+        VisualEffect newSplashVFX = Instantiate(beingHitSplashVFX, splashPosition, splashRotation);
+        newSplashVFX.transform.localScale = Vector3.Scale(splashOrigin.lossyScale, beingHitSplashVFX.transform.localScale);
         newSplashVFX.SendEvent("OnPlay");
         Destroy(newSplashVFX.gameObject, 10f);
     }

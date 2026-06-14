@@ -28,6 +28,8 @@ public class FusionPlayerAvatar : NetworkBehaviour
     [SerializeField] private float groundedGravity = -2f;
     [SerializeField] private float moveAcceleration = 14f;
     [SerializeField] private float moveDeceleration = 100f;
+    [SerializeField] private float keyboardInputAcceleration = 10f;
+    [SerializeField] private float keyboardInputDeceleration = 14f;
     [SerializeField] private float animatorDampTime = 0.06f;
     [SerializeField] private float stopAnimatorDampTime = 0.01f;
     [SerializeField] private float attackDuration = 0.65f;
@@ -85,6 +87,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     private int initialSpawnCorrectionTicks;
     private bool attackQueued;
     private bool slideQueued;
+    private Vector3 smoothedKeyboardMoveInput;
     private bool hasAppliedNetworkDeath;
     private int lastDamageSourceId;
     private double lastDamageTime = -999d;
@@ -987,7 +990,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         UpdateHurtMovementLock(deltaTime);
 
         bool movementLocked = IsInputMovementLocked();
-        Vector3 targetMoveDirection = !movementLocked && slideTimer > 0f ? slideDirection : GetMoveInput();
+        Vector3 targetMoveDirection = !movementLocked && slideTimer > 0f ? slideDirection : GetMoveInput(deltaTime);
         targetMoveDirection.y = 0f;
         targetMoveDirection = Vector3.ClampMagnitude(targetMoveDirection, 1f);
 
@@ -1105,7 +1108,37 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
-    private Vector3 GetMoveInput()
+    private Vector3 GetMoveInput(float deltaTime)
+    {
+        Vector3 keyboardDirection = ReadKeyboardMoveInput();
+        Vector3 joystickDirection = JoyStickController.direct;
+        joystickDirection.y = 0f;
+
+        bool hasKeyboardInput = keyboardDirection.sqrMagnitude > MoveInputThreshold;
+        bool hasJoystickInput = joystickDirection.sqrMagnitude > MoveInputThreshold;
+
+        if (hasJoystickInput && !hasKeyboardInput)
+        {
+            smoothedKeyboardMoveInput = Vector3.zero;
+            return Vector3.ClampMagnitude(joystickDirection, 1f);
+        }
+
+        float inputSmoothingSpeed = hasKeyboardInput ? keyboardInputAcceleration : keyboardInputDeceleration;
+        smoothedKeyboardMoveInput = Vector3.MoveTowards(
+            smoothedKeyboardMoveInput,
+            hasKeyboardInput ? keyboardDirection : Vector3.zero,
+            Mathf.Max(0f, inputSmoothingSpeed) * Mathf.Max(0f, deltaTime)
+        );
+
+        if (smoothedKeyboardMoveInput.sqrMagnitude > MoveInputThreshold)
+        {
+            return Vector3.ClampMagnitude(smoothedKeyboardMoveInput, 1f);
+        }
+
+        return hasJoystickInput ? Vector3.ClampMagnitude(joystickDirection, 1f) : Vector3.zero;
+    }
+
+    private Vector3 ReadKeyboardMoveInput()
     {
         Vector3 direction = Vector3.zero;
 
@@ -1153,11 +1186,6 @@ public class FusionPlayerAvatar : NetworkBehaviour
             direction.x -= 1f;
         }
 #endif
-
-        if (direction.sqrMagnitude <= MoveInputThreshold)
-        {
-            direction = JoyStickController.direct;
-        }
 
         return Vector3.ClampMagnitude(direction, 1f);
     }
@@ -1233,7 +1261,8 @@ public class FusionPlayerAvatar : NetworkBehaviour
             return;
         }
 
-        Vector3 direction = GetMoveInput();
+        float inputDeltaTime = Runner != null ? Runner.DeltaTime : Time.deltaTime;
+        Vector3 direction = GetMoveInput(inputDeltaTime);
         direction.y = 0f;
 
         if (direction.sqrMagnitude <= MoveInputThreshold)

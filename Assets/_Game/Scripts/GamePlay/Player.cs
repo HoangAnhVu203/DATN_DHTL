@@ -1,5 +1,5 @@
 using UnityEngine;
-#if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -14,6 +14,8 @@ public class Player : Character
     [SerializeField] private float slideDuration = 0.5f;
     [SerializeField] private float slideDistance = 3f;
     [SerializeField] private float hurtImpactForce = 5f;
+    [SerializeField] private float keyboardInputAcceleration = 10f;
+    [SerializeField] private float keyboardInputDeceleration = 14f;
 
     private PlayerVFXManager vfxManager;
     private float attackTimer;
@@ -22,6 +24,7 @@ public class Player : Character
     private int requestedComboCount;
     private bool cancelQueuedCombosForMove;
     private Vector3 slideDirection;
+    private Vector3 smoothedKeyboardMoveInput;
     protected override float HurtImpactForce => hurtImpactForce;
     protected override bool CanBecomeInvincible => true;
 
@@ -33,19 +36,32 @@ public class Player : Character
 
     protected override Vector3 GetMoveDirection()
     {
-#if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
-        Vector3 editorDirection = GetEditorMoveDirection();
+        Vector3 keyboardDirection = ReadKeyboardMoveInput();
+        Vector3 joystickDirection = JoyStickController.direct;
+        joystickDirection.y = 0f;
 
-        if (editorDirection.sqrMagnitude > 0.001f)
+        bool hasKeyboardInput = keyboardDirection.sqrMagnitude > MoveInputThreshold;
+        bool hasJoystickInput = joystickDirection.sqrMagnitude > MoveInputThreshold;
+
+        if (hasJoystickInput && !hasKeyboardInput)
         {
-            return editorDirection;
+            smoothedKeyboardMoveInput = Vector3.zero;
+            return Vector3.ClampMagnitude(joystickDirection, 1f);
         }
-#endif
 
-        Vector3 direction = JoyStickController.direct;
-        direction.y = 0f;
+        float inputSmoothingSpeed = hasKeyboardInput ? keyboardInputAcceleration : keyboardInputDeceleration;
+        smoothedKeyboardMoveInput = Vector3.MoveTowards(
+            smoothedKeyboardMoveInput,
+            hasKeyboardInput ? keyboardDirection : Vector3.zero,
+            Mathf.Max(0f, inputSmoothingSpeed) * Time.deltaTime
+        );
 
-        return direction;
+        if (smoothedKeyboardMoveInput.sqrMagnitude > MoveInputThreshold)
+        {
+            return Vector3.ClampMagnitude(smoothedKeyboardMoveInput, 1f);
+        }
+
+        return hasJoystickInput ? Vector3.ClampMagnitude(joystickDirection, 1f) : Vector3.zero;
     }
 
     public void Attack()
@@ -309,15 +325,15 @@ public class Player : Character
 #endif
     }
 
-#if UNITY_EDITOR && ENABLE_INPUT_SYSTEM
-    private Vector3 GetEditorMoveDirection()
+    private Vector3 ReadKeyboardMoveInput()
     {
+        Vector3 direction = Vector3.zero;
+
+#if ENABLE_INPUT_SYSTEM
         if (Keyboard.current == null)
         {
             return Vector3.zero;
         }
-
-        Vector3 direction = Vector3.zero;
 
         if (Keyboard.current.wKey.isPressed)
         {
@@ -338,8 +354,28 @@ public class Player : Character
         {
             direction.x -= 1f;
         }
+#else
+        if (Input.GetKey(KeyCode.W))
+        {
+            direction.z += 1f;
+        }
+
+        if (Input.GetKey(KeyCode.S))
+        {
+            direction.z -= 1f;
+        }
+
+        if (Input.GetKey(KeyCode.D))
+        {
+            direction.x += 1f;
+        }
+
+        if (Input.GetKey(KeyCode.A))
+        {
+            direction.x -= 1f;
+        }
+#endif
 
         return Vector3.ClampMagnitude(direction, 1f);
     }
-#endif
 }
