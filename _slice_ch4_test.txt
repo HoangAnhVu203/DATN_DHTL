@@ -1,0 +1,40 @@
+0756	[Caption]	Hình 4.19  Giao diện Lịch sử trận đấu
+0757	[Heading 2]	Kiểm thử và đánh giá hệ thống
+0758	[Content]	Sau khi hoàn thành các chức năng chính, hệ thống được kiểm thử nhằm đánh giá mức độ đáp ứng yêu cầu, khả năng đồng bộ đa người chơi, tính ổn định của phía máy chủ và mức độ an toàn dữ liệu. Do đề tài là game 3D co-op nhiều người chơi theo mô hình client-server, việc kiểm thử không chỉ dừng lại ở giao diện mà còn cần kiểm tra luồng dữ liệu, trạng thái phòng, trạng thái trận đấu, đồng bộ quá trình chơi và các trường hợp lỗi thường gặp.
+0759	[Heading 3]	Mục tiêu kiểm thử
+0760	[Content]	Quá trình kiểm thử tập trung vào các mục tiêu chính sau:
+0761	[Content]	Kiểm tra các chức năng cơ bản như đăng ký, đăng nhập, tạo phòng, tham gia phòng, sẵn sàng, bắt đầu trận và kết thúc trận.
+0762	[Content]	Kiểm tra khả năng đồng bộ quá trình chơi giữa nhiều client, bao gồm vị trí người chơi, hành động, máu, kẻ địch, vật phẩm, hồi sinh và kết quả trận đấu.
+0763	[Content]	Kiểm tra phía máy chủ có xử lý đúng các thao tác quan trọng như tạo phòng, tham gia phòng, bắt đầu trận và lưu kết quả hay không.
+0764	[Content]	Kiểm tra các trường hợp sai quyền, thiếu token hoặc gửi dữ liệu không hợp lệ.
+0765	[Content]	Đánh giá sơ bộ hiệu năng của hệ thống khi có từ 2 đến 4 người chơi cùng tham gia một trận.
+0766	[Heading 3]	Môi trường kiểm thử
+0767	[Quote]	Bảng 4.5 Môi trường quản lý và kiểm thử
+0768	[Content]	Việc kiểm thử được thực hiện bằng cách cho nhiều client đăng nhập bằng các tài khoản khác nhau, cùng tạo hoặc tham gia phòng chơi, bắt đầu trận và thực hiện các thao tác quá trình chơi trong cùng một phiên chơi.
+0769	[Heading 3]	Ma trận kiểm thử chức năng chính
+0770	[Quote]	Bảng 4.6 Ma trận kiểm thử chức năng chính
+0772	[Quote]	Hình 4.20  Ba client cùng tham gia phòng chơi
+0774	[Caption]	Hình 4.21  Các client cùng vào trận đa người chơi
+0776	[Caption]	Hình 4.22  Đồng bộ chiến đấu và kẻ địch trong trận
+0778	[Caption]	Hình 4.23  Dữ liệu match_players được lưu trên Supabase
+0780	[Caption]	Hình 4.24  Giao diện lịch sử trận đấu sau khi kết thúc trận
+0782	[Heading 3]	Kiểm thử đa người chơi và hiệu năng
+0783	[Content]	Đối với game đa người chơi, đồng bộ trạng thái là yếu tố quan trọng nhất. Hệ thống được kiểm thử bằng cách cho nhiều client cùng tham gia một trận, thực hiện các thao tác như di chuyển, tấn công, nhặt vật phẩm, hồi sinh và kết thúc trận.
+0784	[Quote]	Bảng 4.7 Kiểm thử hiệu năng
+0785	[Quote]	Bảng 4.8 Bảng đo hiệu năng
+0786	[Content]	Dựa trên kết quả đo hiệu năng, hệ thống hoạt động ổn định trong phạm vi thử nghiệm từ 2 đến 4 client. Ở kịch bản một phòng chơi cơ bản với 2 client, FPS trung bình đạt 43 FPS và RTT trung bình khoảng 71 ms, quá trình chơi diễn ra ổn định. Khi tăng lên 4 client trong cùng trận, FPS trung bình đạt 40 FPS và RTT tăng lên 87 ms, cho thấy hệ thống vẫn duy trì được khả năng đồng bộ đa người chơi nhưng độ trễ mạng có tăng khi số lượng người chơi nhiều hơn.
+0788	[Content]	Trong kịch bản chiến đấu với nhiều kẻ địch, FPS trung bình đạt 40 FPS và RTT khoảng 100 ms. Đây là kịch bản nặng hơn do hệ thống phải xử lý đồng thời nhiều đối tượng như người chơi, kẻ địch, hành động, sát thương và trạng thái quá trình chơi. Tuy nhiên, mức FPS vẫn đủ để trải nghiệm game tiếp tục diễn ra, không ghi nhận lỗi mất đồng bộ nghiêm trọng trong phạm vi thử nghiệm.
+0789	[Content]	Ở kịch bản kết thúc trận và lưu kết quả, FPS trung bình đạt 69 FPS và RTT khoảng 65 ms. Kết quả này cho thấy khi quá trình chơi thời gian thực giảm tải và hệ thống chuyển sang xử lý kết quả, hiệu năng client cải thiện rõ rệt. Chức năng end_match và lịch sử trận đấu hoạt động đúng, dữ liệu trận đấu được lưu và hiển thị lại sau trận.
+0790	[Content]	Nhìn chung, hệ thống đáp ứng được yêu cầu hiệu năng cơ bản của một bản demo game co-op 3D từ 2 đến 4 người chơi. Khi số lượng người chơi và kẻ địch tăng, RTT có xu hướng tăng và FPS giảm nhẹ, nhưng hệ thống vẫn duy trì được quá trình chơi ở mức chấp nhận được. Tuy nhiên, kết quả kiểm thử mới được thực hiện ở quy mô nhỏ, chưa đủ để kết luận hệ thống có thể đáp ứng tải lớn hoặc nhiều phòng chơi hoạt động đồng thời trong thời gian dài. Đây là hướng cần tiếp tục kiểm thử và tối ưu trong các phiên bản phát triển tiếp theo.
+0791	[Heading 3]	Kiểm thử Backend/API và bảo mật
+0792	[Content]	Các thao tác quan trọng như tạo phòng, tham gia phòng, bắt đầu trận và lưu kết quả được xử lý thông qua Supabase Edge Functions. Việc kiểm thử phía máy chủ nhằm đảm bảo client không thể tự ý ghi dữ liệu không hợp lệ vào cơ sở dữ liệu.
+0793	[Quote]	Bảng 4.9 Kiểm thử Phía máy chủ
+0795	[Caption]	Hình 4.25  Kiểm thử API start_match với user không phải chủ phòng
+0797	[Caption]	Hình 4.26  Dữ liệu match_players sau khi lưu kết quả trận đấu
+0799	[Heading 3]	Kiểm thử lỗi mạng và độ ổn định
+0800	[Quote]	Bảng 4.10 Kiểm thử mạng và độ ổn định
+0801	[Content]	Qua kiểm thử lỗi mạng, hệ thống đã có khả năng tách dữ liệu giữa các phòng và trận đấu thông qua room_id, match_id và phiêncủa Photon Fusion. Tuy nhiên, một số tình huống nâng cao như chủ phòng thoát phòng, reconnect sau khi mất mạng hoặc cleanup phòng treo chưa được xử lý hoàn chỉnh. Đây là hạn chế cần tiếp tục cải thiện trong các phiên bản sau.
+0802	[Heading 3]	Nhận xét kết quả kiểm thử
+0803	[Normal]	Kết quả kiểm thử cho thấy hệ thống đã đáp ứng được các yêu cầu chính của đồ án: người chơi có thể đăng nhập, tạo phòng, tham gia phòng, sẵn sàng, bắt đầu trận, chơi cùng nhau trong môi trường đa người chơi, đồng bộ trạng thái quá trình chơi và lưu kết quả sau trận. Việc kết hợp Supabase và Photon Fusion giúp hệ thống tách biệt rõ giữa dữ liệu nghiệp vụ và dữ liệu quá trình chơi thời gian thực.
+0804	[Normal]	Supabase đảm nhiệm các dữ liệu cần lưu trữ lâu dài và cần kiểm soát quyền như tài khoản, phòng chơi, trận đấu, lịch sử và bảng xếp hạng. Photon Fusion đảm nhiệm các dữ liệu thay đổi liên tục trong trận như vị trí, hành động, máu, kẻ địch, vật phẩm và trạng thái thắng/thua. Cách phân chia này giúp hệ thống vận hành phù hợp với phạm vi game co-op 2 đến 4 người chơi.
+0805	[Normal]	Tuy nhiên, hệ thống vẫn còn một số hạn chế. Việc kiểm thử mới thực hiện ở quy mô nhỏ, chưa đánh giá tải lớn với nhiều phòng hoạt động đồng thời trong thời gian dài. Mô hình hiện tại là semi server-authoritative nên mới hạn chế gian lận ở mức cơ bản, chưa thể chống cheat hoàn toàn như mô hình dedicated server-authoritative. Ngoài ra, các chức năng như reconnect, chuyển chủ phòng, cleanup phòng treo và kiểm thử tải nâng cao cần được tiếp tục phát triển trong tương lai.

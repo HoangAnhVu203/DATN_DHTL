@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Text;
+using Fusion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -25,7 +26,12 @@ public class PanelGamePlay : UICanvas
     [SerializeField] private Slider healthSlider;
     [SerializeField] private TMP_Text coinText;
     [SerializeField] private Text matchTimerText;
+    [SerializeField] private Text fpsText;
+    [SerializeField] private Text pingText;
     [SerializeField] private float reviveHoldDuration = 3f;
+    [Header("Performance Stats")]
+    [SerializeField] private bool showPerformanceStats = true;
+    [SerializeField] private float performanceStatsUpdateInterval = 0.5f;
     [SerializeField] private bool enableTestWinButton;
     [SerializeField] private bool createTestWinButtonAtRuntime;
     [SerializeField] private int testWinHostDamage = 9999;
@@ -45,7 +51,13 @@ public class PanelGamePlay : UICanvas
     private int lastObservedGameplayCoin;
     private bool isSavingCoin;
     private int requestedCoinSaveTotal = -1;
+    private float fpsSampleTime;
+    private int fpsSampleFrames;
+    private float statsUpdateTimer;
+    private float averageFps;
+    private float averagePingMs = -1f;
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         EnsureEventSystem();
@@ -87,6 +99,7 @@ public class PanelGamePlay : UICanvas
         BindTestWinButton();
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         UnsubscribePlayerStats();
@@ -110,9 +123,11 @@ public class PanelGamePlay : UICanvas
         reviveRequestSent = false;
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         UpdateMatchTimer();
+        UpdatePerformanceStats(Time.unscaledDeltaTime);
         UpdateReviveButton(Time.unscaledDeltaTime);
 
         if (Time.unscaledTime >= nextPlayerSearchTime)
@@ -128,6 +143,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Puts this panel into its default ready state.
     public override void SetUp()
     {
         base.SetUp();
@@ -137,6 +153,7 @@ public class PanelGamePlay : UICanvas
         RefreshPlayerStats();
     }
 
+    // Handles the attack button click.
     public void OnAttackButtonClicked()
     {
         if (player == null)
@@ -154,6 +171,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Handles the slide button click.
     public void OnSlideButtonClicked()
     {
         if (player == null)
@@ -171,6 +189,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Handles the test win button click.
     public void OnTestWinButtonClicked()
     {
         OnlineMatchStats.AddTestWinStatsToHost(testWinHostDamage, testWinHostKills);
@@ -226,6 +245,8 @@ public class PanelGamePlay : UICanvas
                 : null;
         }
 
+        BindPerformanceTextReferences();
+
         if (reviveButton == null)
         {
             reviveButton = FindButtonByName("ReviveBtn") ?? FindButtonByName("ReviveButton");
@@ -260,6 +281,131 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    private void BindPerformanceTextReferences()
+    {
+        if (fpsText == null)
+        {
+            fpsText = FindTextByName("FpsText")
+                ?? FindTextByName("FPSText")
+                ?? FindTextByName("FPS Text");
+        }
+
+        if (pingText == null)
+        {
+            pingText = FindTextByName("PingText")
+                ?? FindTextByName("RttText")
+                ?? FindTextByName("RTTText")
+                ?? FindTextByName("Ping Text")
+                ?? FindTextByName("RTT Text");
+        }
+
+        if (!showPerformanceStats)
+        {
+            SetPerformanceTextsVisible(false);
+            return;
+        }
+
+        if (fpsText == null || pingText == null)
+        {
+            CreateRuntimePerformanceTexts();
+        }
+
+        SetPerformanceTextsVisible(true);
+    }
+
+    private Text FindTextByName(string textName)
+    {
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+
+        foreach (Transform child in children)
+        {
+            if (child == null || child.gameObject.name != textName)
+            {
+                continue;
+            }
+
+            Text text = child.GetComponent<Text>();
+            if (text != null)
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    // Creates the FPS and ping labels when the scene lacks them.
+    private void CreateRuntimePerformanceTexts()
+    {
+        GameObject statsRootObject = FindChildByName("RuntimePerformanceStats");
+        RectTransform statsRoot;
+
+        if (statsRootObject == null)
+        {
+            statsRootObject = new GameObject("RuntimePerformanceStats", typeof(RectTransform));
+            statsRootObject.transform.SetParent(transform, false);
+        }
+
+        statsRoot = statsRootObject.GetComponent<RectTransform>();
+        statsRoot.anchorMin = new Vector2(0f, 1f);
+        statsRoot.anchorMax = new Vector2(0f, 1f);
+        statsRoot.pivot = new Vector2(0f, 1f);
+        statsRoot.anchoredPosition = new Vector2(38f, -82f);
+        statsRoot.sizeDelta = new Vector2(220f, 54f);
+
+        if (fpsText == null)
+        {
+            fpsText = CreateRuntimePerformanceText(statsRoot, "FpsText", new Vector2(0f, -2f));
+        }
+
+        if (pingText == null)
+        {
+            pingText = CreateRuntimePerformanceText(statsRoot, "PingText", new Vector2(0f, -28f));
+        }
+    }
+
+    // Creates one runtime performance label.
+    private Text CreateRuntimePerformanceText(Transform parent, string textName, Vector2 anchoredPosition)
+    {
+        GameObject textObject = new GameObject(textName, typeof(RectTransform), typeof(Text));
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0f, 1f);
+        textRect.anchorMax = new Vector2(0f, 1f);
+        textRect.pivot = new Vector2(0f, 1f);
+        textRect.anchoredPosition = anchoredPosition;
+        textRect.sizeDelta = new Vector2(220f, 24f);
+
+        Text text = textObject.GetComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 18;
+        text.alignment = TextAnchor.MiddleLeft;
+        text.color = Color.white;
+        text.raycastTarget = false;
+        text.text = "-";
+
+        Outline outline = textObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
+
+        return text;
+    }
+
+    // Shows or hides the FPS and ping labels.
+    private void SetPerformanceTextsVisible(bool visible)
+    {
+        if (fpsText != null && fpsText.gameObject.activeSelf != visible)
+        {
+            fpsText.gameObject.SetActive(visible);
+        }
+
+        if (pingText != null && pingText.gameObject.activeSelf != visible)
+        {
+            pingText.gameObject.SetActive(visible);
+        }
+    }
+
     private void BindTestWinButton()
     {
         if (!enableTestWinButton)
@@ -287,6 +433,7 @@ public class PanelGamePlay : UICanvas
         testWinButton.onClick.AddListener(OnTestWinButtonClicked);
     }
 
+    // Creates the debug win button at runtime.
     private Button CreateRuntimeTestWinButton()
     {
         GameObject existing = FindChildByName("TestWinBtn");
@@ -414,6 +561,7 @@ public class PanelGamePlay : UICanvas
         return null;
     }
 
+    // Subscribes to player stats events.
     private void SubscribePlayerStats()
     {
         UnsubscribePlayerStats();
@@ -433,6 +581,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Unsubscribes from player stats events.
     private void UnsubscribePlayerStats()
     {
         if (subscribedPlayerHealth != null)
@@ -448,6 +597,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Refreshes the player stats.
     private void RefreshPlayerStats()
     {
         UpdateMatchTimer();
@@ -463,6 +613,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Handles the player health changed callback.
     private void OnPlayerHealthChanged(int currentHealth, int maxHealth)
     {
         if (healthSlider == null)
@@ -477,6 +628,7 @@ public class PanelGamePlay : UICanvas
         EnsureHealthFillVisible();
     }
 
+    // Updates the match timer.
     private void UpdateMatchTimer()
     {
         if (matchTimerText == null)
@@ -490,6 +642,119 @@ public class PanelGamePlay : UICanvas
         matchTimerText.text = $"{minutes:00}:{seconds:00}";
     }
 
+    // Refreshes FPS and ping text on a light timer.
+    private void UpdatePerformanceStats(float deltaTime)
+    {
+        if (!showPerformanceStats)
+        {
+            return;
+        }
+
+        if (fpsText == null || pingText == null)
+        {
+            BindPerformanceTextReferences();
+        }
+
+        fpsSampleFrames++;
+        fpsSampleTime += Mathf.Max(0f, deltaTime);
+        statsUpdateTimer += Mathf.Max(0f, deltaTime);
+
+        float safeInterval = Mathf.Max(0.1f, performanceStatsUpdateInterval);
+        if (statsUpdateTimer < safeInterval)
+        {
+            return;
+        }
+
+        statsUpdateTimer = 0f;
+
+        if (fpsSampleTime > 0f && fpsSampleFrames > 0)
+        {
+            averageFps = fpsSampleFrames / fpsSampleTime;
+        }
+
+        fpsSampleFrames = 0;
+        fpsSampleTime = 0f;
+        averagePingMs = GetAveragePingMs();
+
+        if (fpsText != null)
+        {
+            fpsText.text = $"FPS Avg: {Mathf.RoundToInt(averageFps)}";
+        }
+
+        if (pingText != null)
+        {
+            pingText.text = averagePingMs >= 0f
+                ? $"Ping Avg: {Mathf.RoundToInt(averagePingMs)} ms"
+                : "Ping Avg: -- ms";
+        }
+    }
+
+    // Returns the average ping ms.
+    private float GetAveragePingMs()
+    {
+        NetworkRunner runner = FindActiveNetworkRunner();
+        if (runner == null || !runner.IsRunning)
+        {
+            return -1f;
+        }
+
+        float totalMs = 0f;
+        int sampleCount = 0;
+
+        foreach (PlayerRef playerRef in runner.ActivePlayers)
+        {
+            float rttMs = NormalizeRttToMilliseconds(runner.GetPlayerRtt(playerRef));
+            if (rttMs <= 0f)
+            {
+                continue;
+            }
+
+            totalMs += rttMs;
+            sampleCount++;
+        }
+
+        if (sampleCount <= 0)
+        {
+            float localRttMs = NormalizeRttToMilliseconds(runner.GetPlayerRtt(runner.LocalPlayer));
+            if (localRttMs > 0f)
+            {
+                return localRttMs;
+            }
+
+            return -1f;
+        }
+
+        return totalMs / sampleCount;
+    }
+
+    // Converts Fusion RTT into milliseconds for display.
+    private float NormalizeRttToMilliseconds(double rtt)
+    {
+        if (rtt <= 0d)
+        {
+            return -1f;
+        }
+
+        double milliseconds = rtt < 10d ? rtt * 1000d : rtt;
+        return (float)milliseconds;
+    }
+
+    private NetworkRunner FindActiveNetworkRunner()
+    {
+        NetworkRunner[] runners = FindObjectsByType<NetworkRunner>(FindObjectsSortMode.None);
+
+        foreach (NetworkRunner runner in runners)
+        {
+            if (runner != null && runner.IsRunning)
+            {
+                return runner;
+            }
+        }
+
+        return null;
+    }
+
+    // Ensures the health fill visible is ready.
     private void EnsureHealthFillVisible()
     {
         if (healthSlider == null || healthSlider.fillRect == null)
@@ -513,6 +778,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Handles the player coin changed callback.
     private void OnPlayerCoinChanged(int coin)
     {
         if (coinText != null)
@@ -539,6 +805,7 @@ public class PanelGamePlay : UICanvas
         QueueCoinSave(SupabaseSession.Coin);
     }
 
+    // Checks whether collected coins can be saved.
     private bool CanSaveCollectedCoin()
     {
         if (!SupabaseSession.IsLoggedIn || string.IsNullOrWhiteSpace(SupabaseSession.UserId))
@@ -549,6 +816,7 @@ public class PanelGamePlay : UICanvas
         return fusionPlayerAvatar == null || fusionPlayerAvatar.IsLocalPlayerAvatar;
     }
 
+    // Queues the coin save.
     private void QueueCoinSave(int totalCoin)
     {
         requestedCoinSaveTotal = Mathf.Max(0, totalCoin);
@@ -559,6 +827,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Runs the save coin coroutine.
     private IEnumerator SaveCoinRoutine()
     {
         isSavingCoin = true;
@@ -574,6 +843,7 @@ public class PanelGamePlay : UICanvas
         isSavingCoin = false;
     }
 
+    // Saves the coin total.
     private IEnumerator SaveCoinTotal(int totalCoin)
     {
         AuthService authService = FindFirstObjectByType<AuthService>();
@@ -664,16 +934,19 @@ public class PanelGamePlay : UICanvas
         trigger.triggers.Add(pointerExit);
     }
 
+    // Starts holding the revive button.
     private void OnRevivePointerDown()
     {
         reviveButtonHeld = true;
     }
 
+    // Stops holding the revive button.
     private void OnRevivePointerUp()
     {
         reviveButtonHeld = false;
     }
 
+    // Updates the revive button.
     private void UpdateReviveButton(float deltaTime)
     {
         if (fusionPlayerAvatar == null)
@@ -759,6 +1032,7 @@ public class PanelGamePlay : UICanvas
         return closest;
     }
 
+    // Checks whether the revive key is being held.
     private bool IsReviveKeyboardHeld()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -768,6 +1042,7 @@ public class PanelGamePlay : UICanvas
 #endif
     }
 
+    // Resets the revive hold.
     private void ResetReviveHold()
     {
         reviveHoldTimer = 0f;
@@ -775,6 +1050,7 @@ public class PanelGamePlay : UICanvas
         SetReviveProgress(0f);
     }
 
+    // Updates the revive button visible.
     private void SetReviveButtonVisible(bool visible)
     {
         if (reviveButton != null && reviveButton.gameObject.activeSelf != visible)
@@ -788,6 +1064,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Updates the revive progress.
     private void SetReviveProgress(float progress)
     {
         progress = Mathf.Clamp01(progress);
@@ -805,6 +1082,7 @@ public class PanelGamePlay : UICanvas
         }
     }
 
+    // Creates an EventSystem when the scene does not have one.
     private void EnsureEventSystem()
     {
         if (EventSystem.current != null)

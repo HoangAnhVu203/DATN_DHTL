@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +13,7 @@ public class PanelRoomTest : MonoBehaviour
 
     private PanelRoomMatch activeRoomMatchPanel;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveSceneReferences();
@@ -25,6 +26,7 @@ public class PanelRoomTest : MonoBehaviour
         }
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         createRoomButton.onClick.RemoveListener(OnCreateRoomClicked);
@@ -35,6 +37,7 @@ public class PanelRoomTest : MonoBehaviour
         }
     }
 
+    // Handles the create room click.
     private void OnCreateRoomClicked()
     {
         createRoomButton.interactable = false;
@@ -44,6 +47,7 @@ public class PanelRoomTest : MonoBehaviour
         StartCoroutine(roomService.CreateRoom(4, OnCreateRoomCompleted));
     }
 
+    // Handles the join room click.
     private void OnJoinRoomClicked()
     {
         if (joinRoomCodeInput == null)
@@ -66,6 +70,7 @@ public class PanelRoomTest : MonoBehaviour
         StartCoroutine(roomService.JoinRoom(roomCode, OnJoinRoomCompleted));
     }
 
+    // Handles the create room request result.
     private void OnCreateRoomCompleted(bool success, RoomService.RoomData data, string error)
     {
         SetButtonsInteractable(true);
@@ -85,6 +90,7 @@ public class PanelRoomTest : MonoBehaviour
         ClearTransientText();
     }
 
+    // Handles the join room request result.
     private void OnJoinRoomCompleted(bool success, RoomService.RoomData data, string error)
     {
         SetButtonsInteractable(true);
@@ -104,6 +110,7 @@ public class PanelRoomTest : MonoBehaviour
         ClearTransientText();
     }
 
+    // Clears the transient text.
     public void ClearTransientText()
     {
         ClearRoomCodeText();
@@ -115,6 +122,7 @@ public class PanelRoomTest : MonoBehaviour
         }
     }
 
+    // Clears the room code text.
     private void ClearRoomCodeText()
     {
         if (roomCodeText != null)
@@ -123,6 +131,7 @@ public class PanelRoomTest : MonoBehaviour
         }
     }
 
+    // Writes a short status message to the UI.
     private void SetStatus(string message)
     {
         if (statusText != null)
@@ -131,6 +140,7 @@ public class PanelRoomTest : MonoBehaviour
         }
     }
 
+    // Opens the room UI after create or join succeeds.
     private void EnterRoom(RoomService.RoomData data)
     {
         OnlineRoomSession.SetRoom(data);
@@ -139,6 +149,7 @@ public class PanelRoomTest : MonoBehaviour
         activeRoomMatchPanel = panel;
     }
 
+    // Opens the room match panel UI.
     private PanelRoomMatch OpenRoomMatchPanel()
     {
         UIManager uiManager = FindFirstObjectByType<UIManager>();
@@ -161,6 +172,7 @@ public class PanelRoomTest : MonoBehaviour
         return activeRoomMatchPanel;
     }
 
+    // Updates the buttons interactable.
     private void SetButtonsInteractable(bool interactable)
     {
         if (createRoomButton != null)

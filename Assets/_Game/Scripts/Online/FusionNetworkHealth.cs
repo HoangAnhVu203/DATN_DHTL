@@ -12,11 +12,13 @@ public class FusionNetworkHealth : NetworkBehaviour
     private int lastAppliedCurrent = -1;
     private int lastAppliedMax = -1;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveReferences();
     }
 
+    // Initializes this object after Fusion spawns it.
     public override void Spawned()
     {
         ResolveReferences();
@@ -29,6 +31,7 @@ public class FusionNetworkHealth : NetworkBehaviour
         ApplyNetworkHealthToLocal();
     }
 
+    // Runs this object on Fusion network ticks.
     public override void FixedUpdateNetwork()
     {
         if (!Object.HasStateAuthority)
@@ -39,11 +42,13 @@ public class FusionNetworkHealth : NetworkBehaviour
         MirrorLocalHealthToNetwork();
     }
 
+    // Copies network health changes into the local Health component.
     public override void Render()
     {
         ApplyNetworkHealthToLocal();
     }
 
+    // Forces the sync now.
     public void ForceSyncNow()
     {
         if (Object != null && Object.IsValid && Object.HasStateAuthority)
@@ -60,6 +65,7 @@ public class FusionNetworkHealth : NetworkBehaviour
         }
     }
 
+    // Pushes local health values into Fusion state authority.
     private void MirrorLocalHealthToNetwork()
     {
         if (health == null)
@@ -81,6 +87,7 @@ public class FusionNetworkHealth : NetworkBehaviour
         }
     }
 
+    // Applies the network health to local.
     private void ApplyNetworkHealthToLocal()
     {
         if (health == null || MaxHealth <= 0)

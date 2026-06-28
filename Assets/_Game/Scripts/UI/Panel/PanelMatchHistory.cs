@@ -19,6 +19,7 @@ public class PanelMatchHistory : UICanvas
     private bool referencesResolved;
     private Coroutine loadRoutine;
 
+    // Opens the from scene UI.
     public static PanelMatchHistory OpenFromScene()
     {
         UIManager uiManager = FindFirstObjectByType<UIManager>();
@@ -42,6 +43,7 @@ public class PanelMatchHistory : UICanvas
         return panel;
     }
 
+    // Shows this panel and refreshes its visible state.
     public override void Open()
     {
         base.Open();
@@ -49,6 +51,7 @@ public class PanelMatchHistory : UICanvas
         Refresh();
     }
 
+    // Closes this panel immediately.
     public override void CloseDirectly()
     {
         if (loadRoutine != null)
@@ -60,6 +63,7 @@ public class PanelMatchHistory : UICanvas
         base.CloseDirectly();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         if (closeButton != null)
@@ -68,6 +72,7 @@ public class PanelMatchHistory : UICanvas
         }
     }
 
+    // Refreshes the.
     public void Refresh()
     {
         ResolveReferences();
@@ -94,6 +99,7 @@ public class PanelMatchHistory : UICanvas
         loadRoutine = StartCoroutine(LoadMatchHistoryRoutine());
     }
 
+    // Runs the load match history coroutine.
     private IEnumerator LoadMatchHistoryRoutine()
     {
         string jsonBody = JsonUtility.ToJson(new MatchHistoryRequest
@@ -138,6 +144,7 @@ public class PanelMatchHistory : UICanvas
         loadRoutine = null;
     }
 
+    // Rebuilds the match history rows.
     private void RenderRows(MatchHistoryData[] histories)
     {
         ClearRows();
@@ -177,6 +184,7 @@ public class PanelMatchHistory : UICanvas
         }
     }
 
+    // Clears the rows.
     private void ClearRows()
     {
         foreach (GameObject row in spawnedRows)
@@ -190,6 +198,7 @@ public class PanelMatchHistory : UICanvas
         spawnedRows.Clear();
     }
 
+    // Updates the row text.
     private void SetRowText(GameObject row, string childName, string value)
     {
         Transform child = FindChild(row.transform, childName);
@@ -250,6 +259,7 @@ public class PanelMatchHistory : UICanvas
         referencesResolved = true;
     }
 
+    // Checks whether the current Supabase session can make requests.
     private bool CanUseSupabase()
     {
         return config != null
@@ -290,6 +300,7 @@ public class PanelMatchHistory : UICanvas
         return null;
     }
 
+    // Writes a short status message to the UI.
     private void SetStatus(string message)
     {
         if (statusText != null)
@@ -298,6 +309,7 @@ public class PanelMatchHistory : UICanvas
         }
     }
 
+    // Formats the result for display.
     private string FormatResult(string result)
     {
         if (string.Equals(result, "win", StringComparison.OrdinalIgnoreCase)
@@ -316,6 +328,7 @@ public class PanelMatchHistory : UICanvas
         return string.IsNullOrWhiteSpace(result) ? "-" : result;
     }
 
+    // Formats the started at for display.
     private string FormatStartedAt(string startedAt, string createdAt)
     {
         string rawValue = !string.IsNullOrWhiteSpace(startedAt) ? startedAt : createdAt;
@@ -327,6 +340,7 @@ public class PanelMatchHistory : UICanvas
         return "-";
     }
 
+    // Formats the duration for display.
     private string FormatDuration(int durationSeconds)
     {
         durationSeconds = Mathf.Max(0, durationSeconds);
@@ -335,6 +349,7 @@ public class PanelMatchHistory : UICanvas
         return $"{minutes:00}:{seconds:00}";
     }
 
+    // Turns request errors into a readable message.
     private string BuildErrorMessage(long statusCode, string requestError, string responseText)
     {
         if (!string.IsNullOrWhiteSpace(responseText))

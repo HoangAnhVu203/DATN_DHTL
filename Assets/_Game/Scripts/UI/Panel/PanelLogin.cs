@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +25,7 @@ public class PanelLogin : MonoBehaviour
     private bool isRegisterMode;
     private Coroutine loginLoadingCoroutine;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveButtonTextReferences();
@@ -55,6 +56,7 @@ public class PanelLogin : MonoBehaviour
         HideIfAlreadyLoggedIn();
     }
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         if (!SupabaseSession.IsLoggedIn)
@@ -65,6 +67,7 @@ public class PanelLogin : MonoBehaviour
         HideIfAlreadyLoggedIn();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         StopLoginLoading();
@@ -78,6 +81,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Handles the submit click.
     private void OnSubmitClicked()
     {
         string email = emailInput.text.Trim();
@@ -104,6 +108,7 @@ public class PanelLogin : MonoBehaviour
         StartCoroutine(authService.SignIn(email, password, OnLoginCompleted));
     }
 
+    // Handles the login request result.
     private void OnLoginCompleted(bool success, string message)
     {
         StopLoginLoading();
@@ -133,6 +138,7 @@ public class PanelLogin : MonoBehaviour
         Debug.Log($"Logged in: {SupabaseSession.UserId} - {SupabaseSession.DisplayName}");
     }
 
+    // Resets the for logged out.
     public void ResetForLoggedOut()
     {
         StopLoginLoading();
@@ -150,6 +156,7 @@ public class PanelLogin : MonoBehaviour
         SetToggleInteractable(true);
     }
 
+    // Starts the login loading process.
     private void StartLoginLoading()
     {
         StopLoginLoading();
@@ -157,6 +164,7 @@ public class PanelLogin : MonoBehaviour
         loginLoadingCoroutine = StartCoroutine(LoginLoadingRoutine());
     }
 
+    // Stops the login loading process.
     private void StopLoginLoading()
     {
         if (loginLoadingCoroutine == null)
@@ -168,6 +176,7 @@ public class PanelLogin : MonoBehaviour
         loginLoadingCoroutine = null;
     }
 
+    // Runs the login loading coroutine.
     private IEnumerator LoginLoadingRoutine()
     {
         float progress = 0.05f;
@@ -180,6 +189,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Handles the register request result.
     private void OnRegisterCompleted(bool success, string message)
     {
         loginButton.interactable = true;
@@ -196,6 +206,7 @@ public class PanelLogin : MonoBehaviour
         Debug.Log(message);
     }
 
+    // Writes a short status message to the UI.
     private void SetStatus(string message)
     {
         if (statusText != null)
@@ -204,6 +215,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Returns the user friendly error.
     private string GetUserFriendlyError(string error, bool registerContext)
     {
         if (string.IsNullOrWhiteSpace(error))
@@ -248,6 +260,7 @@ public class PanelLogin : MonoBehaviour
             : "Đăng nhập thất bại. Xem Console để biết chi tiết.";
     }
 
+    // Updates the display name.
     private void UpdateDisplayName()
     {
         if (displayNameText == null)
@@ -258,6 +271,7 @@ public class PanelLogin : MonoBehaviour
         displayNameText.text = SupabaseSession.DisplayName;
     }
 
+    // Hides the if already logged in.
     private void HideIfAlreadyLoggedIn()
     {
         if (!SupabaseSession.IsLoggedIn)
@@ -278,6 +292,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Runs the toggle mode step.
     private void ToggleMode()
     {
         isRegisterMode = !isRegisterMode;
@@ -285,6 +300,7 @@ public class PanelLogin : MonoBehaviour
         RefreshModeText();
     }
 
+    // Clears the input fields.
     private void ClearInputFields()
     {
         if (emailInput != null)
@@ -298,6 +314,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Refreshes the mode text.
     private void RefreshModeText()
     {
         if (loginButtonText != null)
@@ -311,6 +328,7 @@ public class PanelLogin : MonoBehaviour
         }
     }
 
+    // Updates the toggle interactable.
     private void SetToggleInteractable(bool interactable)
     {
         if (registerToggleButton != null)

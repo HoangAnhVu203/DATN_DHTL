@@ -22,6 +22,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
     private bool startRequested;
     private Coroutine waitForPlayersCoroutine;
 
+    // Runs the first scene-time setup for this object.
     private async void Start()
     {
         ResolveReferences();
@@ -95,6 +96,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         SpawnLocalPlayerIfNeeded(runner.LocalPlayer);
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         if (runner != null)
@@ -109,6 +111,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // Handles the player joined callback.
     public void OnPlayerJoined(NetworkRunner currentRunner, PlayerRef player)
     {
         Debug.Log($"FusionMatchBootstrap: OnPlayerJoined {player}, LocalPlayer={currentRunner.LocalPlayer}.");
@@ -121,6 +124,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         SpawnLocalPlayerIfNeeded(player);
     }
 
+    // Handles the player left callback.
     public void OnPlayerLeft(NetworkRunner currentRunner, PlayerRef player)
     {
         if (currentRunner == null || player != currentRunner.LocalPlayer)
@@ -134,36 +138,54 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // Handles Fusion runner shutdown.
     public void OnShutdown(NetworkRunner currentRunner, ShutdownReason shutdownReason)
     {
         Debug.Log($"FusionMatchBootstrap: runner shutdown. Reason: {shutdownReason}");
     }
 
+    // Handles a lost server connection.
     public void OnDisconnectedFromServer(NetworkRunner currentRunner, NetDisconnectReason reason)
     {
         Debug.LogWarning($"FusionMatchBootstrap: disconnected from server. Reason: {reason}");
     }
 
+    // Handles a failed Fusion connection attempt.
     public void OnConnectFailed(NetworkRunner currentRunner, NetAddress remoteAddress, NetConnectFailedReason reason)
     {
         Debug.LogError($"FusionMatchBootstrap: connect failed to {remoteAddress}. Reason: {reason}");
     }
 
+    // Supplies local input to Fusion.
     public void OnInput(NetworkRunner currentRunner, NetworkInput input) { }
+    // Handles missing input for a Fusion tick.
     public void OnInputMissing(NetworkRunner currentRunner, PlayerRef player, NetworkInput input) { }
+    // Handles a successful server connection.
     public void OnConnectedToServer(NetworkRunner currentRunner) { }
+    // Handles an incoming Fusion connection request.
     public void OnConnectRequest(NetworkRunner currentRunner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
+    // Handles custom Fusion simulation messages.
     public void OnUserSimulationMessage(NetworkRunner currentRunner, SimulationMessagePtr message) { }
+    // Receives Fusion session list updates.
     public void OnSessionListUpdated(NetworkRunner currentRunner, List<SessionInfo> sessionList) { }
+    // Receives Fusion custom auth responses.
     public void OnCustomAuthenticationResponse(NetworkRunner currentRunner, Dictionary<string, object> data) { }
+    // Handles Fusion host migration.
     public void OnHostMigration(NetworkRunner currentRunner, HostMigrationToken hostMigrationToken) { }
+    // Runs after Fusion finishes loading a scene.
     public void OnSceneLoadDone(NetworkRunner currentRunner) { }
+    // Runs when Fusion starts loading a scene.
     public void OnSceneLoadStart(NetworkRunner currentRunner) { }
+    // Handles a network object entering AOI.
     public void OnObjectEnterAOI(NetworkRunner currentRunner, NetworkObject obj, PlayerRef player) { }
+    // Handles a network object leaving AOI.
     public void OnObjectExitAOI(NetworkRunner currentRunner, NetworkObject obj, PlayerRef player) { }
+    // Handles reliable data received from Fusion.
     public void OnReliableDataReceived(NetworkRunner currentRunner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
+    // Tracks reliable data transfer progress.
     public void OnReliableDataProgress(NetworkRunner currentRunner, PlayerRef player, ReliableKey key, float progress) { }
 
+    // Spawns the local player if needed.
     private void SpawnLocalPlayerIfNeeded(PlayerRef player)
     {
         if (runner == null || !runner.IsRunning || startRequested || localPlayerObject != null)
@@ -203,6 +225,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         StartWaitForAllPlayersSpawned();
     }
 
+    // Starts the wait for all players spawned process.
     private void StartWaitForAllPlayersSpawned()
     {
         if (waitForPlayersCoroutine != null)
@@ -213,6 +236,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         waitForPlayersCoroutine = StartCoroutine(WaitForAllPlayersSpawnedRoutine());
     }
 
+    // Waits until every expected network player has spawned.
     private IEnumerator WaitForAllPlayersSpawnedRoutine()
     {
         int expectedPlayerCount = GetExpectedPlayerCount();
@@ -252,6 +276,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         waitForPlayersCoroutine = null;
     }
 
+    // Returns the expected player count.
     private int GetExpectedPlayerCount()
     {
         if (OnlineRoomSession.ExpectedMatchPlayerCount > 0)
@@ -267,6 +292,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return 1;
     }
 
+    // Counts the player avatars currently spawned in the match.
     private int CountSpawnedNetworkPlayers()
     {
         FusionPlayerAvatar[] playerAvatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
@@ -328,6 +354,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // Returns the session name.
     private string GetSessionName()
     {
         if (!string.IsNullOrWhiteSpace(OnlineRoomSession.MatchId))
@@ -338,6 +365,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return null;
     }
 
+    // Returns the Photon user id for the local player.
     private string GetPhotonUserId()
     {
         if (!string.IsNullOrWhiteSpace(SupabaseSession.UserId))
@@ -353,6 +381,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return SystemInfo.deviceUniqueIdentifier;
     }
 
+    // Returns the spawn point.
     private Transform GetSpawnPoint(int spawnIndex)
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
@@ -364,6 +393,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return spawnPoints[pointIndex];
     }
 
+    // Returns the spawn position.
     private Vector3 GetSpawnPosition(Transform spawnPoint, int spawnIndex)
     {
         Vector3 basePosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
@@ -383,6 +413,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return basePosition + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
     }
 
+    // Returns the spawn index for the given player.
     private int GetSpawnIndexForPlayer(PlayerRef player)
     {
         int roomPlayerIndex = GetLocalRoomPlayerIndex();
@@ -404,6 +435,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return 0;
     }
 
+    // Returns the local room player index.
     private int GetLocalRoomPlayerIndex()
     {
         List<RoomService.RoomPlayerData> players = OnlineRoomSession.Players;
@@ -416,6 +448,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         return index;
     }
 
+    // Disables the scene player template.
     private void DisableScenePlayerTemplate()
     {
         if (scenePlayerTemplate != null)
@@ -424,6 +457,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // Places the offline player at the selected spawn point.
     private void PlaceOfflinePlayer()
     {
         if (scenePlayerTemplate == null)
@@ -443,6 +477,7 @@ public class FusionMatchBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         scenePlayerTemplate.enabled = true;
     }
 
+    // Returns the spawn index.
     private int GetSpawnIndex(string spawnName)
     {
         int underscoreIndex = spawnName.LastIndexOf('_');

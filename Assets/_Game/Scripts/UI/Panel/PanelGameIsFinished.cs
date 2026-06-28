@@ -7,6 +7,7 @@ public class PanelGameIsFinished : UICanvas
     [SerializeField] private Button restartButton;
     [SerializeField] private MatchResultLeaderboardRenderer leaderboardRenderer;
 
+    // Puts this panel into its default ready state.
     public override void SetUp()
     {
         base.SetUp();
@@ -14,6 +15,7 @@ public class PanelGameIsFinished : UICanvas
         RenderMatchLeaderboard();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         RemoveListeners();
@@ -53,6 +55,7 @@ public class PanelGameIsFinished : UICanvas
         }
     }
 
+    // Removes the listeners.
     private void RemoveListeners()
     {
         if (returnRoomButton != null)
@@ -79,11 +82,13 @@ public class PanelGameIsFinished : UICanvas
         return null;
     }
 
+    // Returns to room.
     private void ReturnToRoom()
     {
         ReturnToRoomAfterMatch.StartReturn();
     }
 
+    // Runs the render match leaderboard step.
     private void RenderMatchLeaderboard()
     {
         if (leaderboardRenderer != null)

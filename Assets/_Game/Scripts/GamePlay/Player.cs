@@ -28,12 +28,14 @@ public class Player : Character
     protected override float HurtImpactForce => hurtImpactForce;
     protected override bool CanBecomeInvincible => true;
 
+    // Sets up this component before gameplay starts.
     protected override void Awake()
     {
         base.Awake();
         vfxManager = GetComponent<PlayerVFXManager>();
     }
 
+    // Returns movement from keyboard or joystick input.
     protected override Vector3 GetMoveDirection()
     {
         Vector3 keyboardDirection = ReadKeyboardMoveInput();
@@ -64,6 +66,7 @@ public class Player : Character
         return hasJoystickInput ? Vector3.ClampMagnitude(joystickDirection, 1f) : Vector3.zero;
     }
 
+    // Starts the attack action when the character can act.
     public void Attack()
     {
         if (CurrentState == CharacterState.Slide
@@ -84,6 +87,7 @@ public class Player : Character
         SwitchToState(CharacterState.Attack);
     }
 
+    // Finishes the current attack step from an animation event.
     public void AttackAnimationEnds()
     {
         if (CurrentState == CharacterState.Attack)
@@ -92,6 +96,7 @@ public class Player : Character
         }
     }
 
+    // Starts the slide action when the character can move.
     public void Slide()
     {
         if (CurrentState == CharacterState.Attack
@@ -106,6 +111,7 @@ public class Player : Character
         SwitchToState(CharacterState.Slide, true);
     }
 
+    // Ends the slide from an animation event.
     public void SlideAnimationEnds()
     {
         if (CurrentState == CharacterState.Slide)
@@ -114,11 +120,13 @@ public class Player : Character
         }
     }
 
+    // Sets up the attack state.
     protected override void OnEnterAttack()
     {
         BeginAttackCombo(1);
     }
 
+    // Sets up the slide state.
     protected override void OnEnterSlide()
     {
         slideTimer = Mathf.Max(slideDuration, 0f);
@@ -127,18 +135,21 @@ public class Player : Character
         UpdateMoveEffects(false);
     }
 
+    // Updates the idle state while it is active.
     protected override void OnUpdateIdle(float deltaTime)
     {
         CheckEditorAttackInput();
         CheckEditorSlideInput();
     }
 
+    // Updates the run state while it is active.
     protected override void OnUpdateRun(float deltaTime)
     {
         CheckEditorAttackInput();
         CheckEditorSlideInput();
     }
 
+    // Updates the attack state while it is active.
     protected override void OnUpdateAttack(float deltaTime)
     {
         CheckEditorAttackInput();
@@ -162,6 +173,7 @@ public class Player : Character
         }
     }
 
+    // Cleans up the attack state.
     protected override void OnExitAttack()
     {
         attackTimer = 0f;
@@ -172,6 +184,7 @@ public class Player : Character
         UpdateMoveEffects(false);
     }
 
+    // Updates the slide state while it is active.
     protected override void OnUpdateSlide(float deltaTime)
     {
         if (slideTimer > 0f)
@@ -196,6 +209,7 @@ public class Player : Character
         }
     }
 
+    // Cleans up the slide state.
     protected override void OnExitSlide()
     {
         slideTimer = 0f;
@@ -203,6 +217,7 @@ public class Player : Character
         UpdateMoveEffects(false);
     }
 
+    // Updates the move effects.
     protected override void UpdateMoveEffects(bool isMoving)
     {
         if (vfxManager != null)
@@ -211,6 +226,7 @@ public class Player : Character
         }
     }
 
+    // Begins the attack step.
     private void BeginAttack()
     {
         attackTimer = Mathf.Max(attackDuration, 0f);
@@ -218,12 +234,14 @@ public class Player : Character
         UpdateMoveEffects(false);
     }
 
+    // Begins the attack combo step.
     private void BeginAttackCombo(int comboIndex)
     {
         currentComboIndex = Mathf.Clamp(comboIndex, 1, MaxComboCount);
         BeginAttack();
     }
 
+    // Queues the next combo.
     private void QueueNextCombo()
     {
         if (cancelQueuedCombosForMove || currentComboIndex >= MaxComboCount)
@@ -234,6 +252,7 @@ public class Player : Character
         requestedComboCount = Mathf.Clamp(requestedComboCount + 1, currentComboIndex, MaxComboCount);
     }
 
+    // Completes the current combo step.
     private void CompleteCurrentCombo()
     {
         if (CurrentState != CharacterState.Attack)
@@ -250,6 +269,7 @@ public class Player : Character
         FinishAttack();
     }
 
+    // Finishes the attack step.
     private void FinishAttack()
     {
         requestedComboCount = 0;
@@ -259,11 +279,13 @@ public class Player : Character
         SwitchToState(HasMoveInput() ? CharacterState.Run : CharacterState.Idle);
     }
 
+    // Checks whether move input is available.
     private bool HasMoveInput()
     {
         return GetMoveDirection().sqrMagnitude > MoveInputThreshold;
     }
 
+    // Returns the slide direction.
     private Vector3 GetSlideDirection()
     {
         Vector3 direction = GetMoveDirection();
@@ -283,6 +305,7 @@ public class Player : Character
         return direction.normalized;
     }
 
+    // Finishes the slide step.
     private void FinishSlide()
     {
         if (CurrentState == CharacterState.Slide)
@@ -291,6 +314,7 @@ public class Player : Character
         }
     }
 
+    // Checks editor attack input.
     private void CheckEditorAttackInput()
     {
 #if UNITY_EDITOR
@@ -308,6 +332,7 @@ public class Player : Character
 #endif
     }
 
+    // Checks editor slide input.
     private void CheckEditorSlideInput()
     {
 #if UNITY_EDITOR
@@ -325,6 +350,7 @@ public class Player : Character
 #endif
     }
 
+    // Reads WASD movement from the active input system.
     private Vector3 ReadKeyboardMoveInput()
     {
         Vector3 direction = Vector3.zero;

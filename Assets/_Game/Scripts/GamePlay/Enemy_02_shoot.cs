@@ -9,12 +9,14 @@ public class Enemy_02_shoot : MonoBehaviour
     private FusionEnemyAvatar fusionEnemyAvatar;
     private float damageMultiplier = 1f;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         cc = GetComponent<Character>();
         fusionEnemyAvatar = GetComponent<FusionEnemyAvatar>();
     }
 
+    // Fires a damage orb from the enemy ranged attack.
     public void ShootTheDamageOrb()
     {
         if (DamageOrb == null || ShootingPoint == null || !CanShootLocally())
@@ -45,11 +47,13 @@ public class Enemy_02_shoot : MonoBehaviour
         ApplyDamageToSpawnedOrb(spawnedLocalOrb);
     }
 
+    // Applies the damage multiplier.
     public void ApplyDamageMultiplier(float multiplier)
     {
         damageMultiplier = Mathf.Max(0.1f, multiplier);
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         if (CanShootLocally() && cc != null)
@@ -58,11 +62,13 @@ public class Enemy_02_shoot : MonoBehaviour
         }
     }
 
+    // Checks whether this enemy should shoot on this client.
     private bool CanShootLocally()
     {
         return fusionEnemyAvatar == null || fusionEnemyAvatar.HasStateAuthorityLocally;
     }
 
+    // Applies the damage to spawned orb.
     private void ApplyDamageToSpawnedOrb(GameObject spawnedOrb)
     {
         if (spawnedOrb == null)

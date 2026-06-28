@@ -16,6 +16,7 @@ public class PlayerVFXManager : MonoBehaviour
     private bool isFootStepPlaying;
 
 
+    // Updates the foot step.
     public void Update_FootStep(bool state)
     {
         if (footStep == null || isFootStepPlaying == state)
@@ -36,11 +37,13 @@ public class PlayerVFXManager : MonoBehaviour
         }
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         Update_FootStep(false);
     }
 
+    // Plays the blade01.
     public void PlayBlade01()
     {
         if (Blade_01 != null)
@@ -48,6 +51,7 @@ public class PlayerVFXManager : MonoBehaviour
             Blade_01.Play();
         }
     }
+    // Plays the blade02.
     public void PlayBlade02()
     {
         if (Blade_02 != null)
@@ -55,6 +59,7 @@ public class PlayerVFXManager : MonoBehaviour
             Blade_02.Play();
         }
     }
+    // Plays the blade03.
     public void PlayBlade03()
     {
         if (Blade_03 != null)
@@ -63,6 +68,7 @@ public class PlayerVFXManager : MonoBehaviour
         }
     }
 
+    // Stops the blade process.
     public void StopBlade()
     {
         Blade_01.Simulate(0);
@@ -75,6 +81,7 @@ public class PlayerVFXManager : MonoBehaviour
         Blade_03.Stop();
     }
 
+    // Plays the slash.
     public void PlaySlash(Vector3 pos)
     {
         if (slash == null)
@@ -86,6 +93,7 @@ public class PlayerVFXManager : MonoBehaviour
         slash.Play();
     }
 
+    // Plays the er health vfx.
     public void PlayerHealthVFX()
     {
         if (heal != null)

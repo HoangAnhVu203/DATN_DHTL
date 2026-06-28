@@ -1,0 +1,21 @@
+0526	[Heading 3]	Đặc tả các Use Case
+0527	[Heading 4]	Đặc tả Use Case Đăng nhập hệ thống
+0528	[Quote]	Bảng 3.5 Đặc tả Use Case Đăng nhập hệ thống
+0530	[Heading 4]	Đặc tả Use Case Cập nhật hồ sơ
+0531	[Quote]	Bảng 3.6 Đặc tả Use Case Cập nhật hồ sơ
+0533	[Heading 4]	Đặc tả Use Case Tạo phòng chơi
+0534	[Quote]	Bảng 3.7 Đặc tả Use Case Tạo phòng chơi
+0536	[Heading 4]	Đặc tả Use Case Tham gia phòng chơi
+0537	[Quote]	Bảng 3.8 Đặc tả Use Case Tham gia phòng chơi
+0539	[Heading 4]	Đặc tả Use Case Sẵn sàng
+0540	[Quote]	Bảng 3.9 Đặc tả Use Case Sẵn sàng
+0542	[Heading 4]	Đặc tả Use Case Bắt đầu trận
+0543	[Quote]	Bảng 3.10 Đặc tả Use Case Bắt đầu trận
+0545	[Heading 4]	Đặc tả Use Case Tham gia gameplay
+0546	[Quote]	Bảng 3.11 Đặc tả Use Case Tham gia gameplay
+0548	[Heading 4]	Đặc tả Use Case Hồi sinh đồng đội
+0549	[Quote]	Bảng 3.12 Đặc tả Use Case Hồi sinh đồng đội
+0553	[Heading 4]	Đặc tả Use Case Kết thúc trận và lưu kết quả
+0554	[Quote]	Bảng 3.13 Đặc tả Use Case Kết thúc trận và lưu kết quả
+0556	[Heading 4]	Đặc tả Use Case Xem kết quả và bảng xếp hạng
+0557	[Quote]	Bảng 3.14 Đặc tả Use Case Xem kết quả và bảng xếp hạng

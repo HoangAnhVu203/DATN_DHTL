@@ -45,11 +45,13 @@ public class FusionEnemyAvatar : NetworkBehaviour
     public bool CanReceiveDamageLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
     public bool HasStateAuthorityLocally => Object != null && Object.IsValid && Object.HasStateAuthority;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveReferences();
     }
 
+    // Initializes this object after Fusion spawns it.
     public override void Spawned()
     {
         ResolveReferences();
@@ -60,6 +62,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         ApplyNetworkDifficultyToLocal();
     }
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         ResolveReferences();
@@ -71,16 +74,19 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         UnsubscribeHealth();
     }
 
+    // Cleans up this object after Fusion despawns it.
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         UnsubscribeHealth();
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         if (Object == null || !Object.IsValid)
@@ -92,6 +98,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         ApplyNetworkDifficultyToLocal();
     }
 
+    // Runs this object on Fusion network ticks.
     public override void FixedUpdateNetwork()
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority || enemy == null)
@@ -104,6 +111,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         enemy.TickMovement(Runner.DeltaTime);
     }
 
+    // Mirrors networked enemy state into local visuals.
     public override void Render()
     {
         if (Object == null || !Object.IsValid || Object.HasStateAuthority || animator == null)
@@ -131,6 +139,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         animator.SetBool(IsGroundedParameter, true);
     }
 
+    // Requests damage from the owning system.
     public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0, PlayerRef attacker = default)
     {
         if (damage <= 0 || Object == null || !Object.IsValid)
@@ -142,6 +151,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         return true;
     }
 
+    // Applies the difficulty.
     public void ApplyDifficulty(int waveIndex, float multiplier, float damageMultiplier)
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
@@ -163,6 +173,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the apply damage RPC.
     private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId, PlayerRef attacker)
     {
         if (enemy == null || !Object.HasStateAuthority)
@@ -204,6 +215,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         networkHealth?.ForceSyncNow();
     }
 
+    // Applies the authority state.
     private void ApplyAuthorityState()
     {
         ResolveReferences();
@@ -260,6 +272,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Refreshes the closest target.
     private void RefreshClosestTarget()
     {
         if (Runner == null || Runner.SimulationTime < nextTargetRefreshTime)
@@ -271,6 +284,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         ForceRefreshClosestTarget();
     }
 
+    // Forces the refresh closest target.
     private void ForceRefreshClosestTarget()
     {
         if (enemy == null)
@@ -281,6 +295,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         enemy.SetTarget(FindClosestPlayer());
     }
 
+    // Runs the sync agent to spawn position step.
     private void SyncAgentToSpawnPosition()
     {
         if (agentSyncedToSpawn || navMeshAgent == null || !navMeshAgent.enabled)
@@ -349,6 +364,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Applies the network difficulty to local.
     private void ApplyNetworkDifficultyToLocal()
     {
         if (Object != null && Object.IsValid && !Object.HasStateAuthority)
@@ -389,6 +405,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Subscribes to health events.
     private void SubscribeHealth()
     {
         if (health == null)
@@ -400,6 +417,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         health.HealthChanged += OnHealthChanged;
     }
 
+    // Unsubscribes from health events.
     private void UnsubscribeHealth()
     {
         if (health != null)
@@ -408,6 +426,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Updates cached health after a health change.
     private void OnHealthChanged(int current, int max)
     {
         if (current > 0 || hasAppliedNetworkDeath || enemy == null)
@@ -423,6 +442,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         }
     }
 
+    // Resets the proxy animation tracking.
     private void ResetProxyAnimationTracking()
     {
         hasLastRenderPosition = true;
@@ -466,6 +486,7 @@ public class FusionEnemyAvatar : NetworkBehaviour
         return closest;
     }
 
+    // Checks whether this enemy can reach any player.
     private bool CanReachPlayer(Transform playerTransform)
     {
         if (playerTransform == null || navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)

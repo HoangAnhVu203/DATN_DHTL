@@ -7,6 +7,7 @@ public class PanelLoading : UICanvas
     [SerializeField] private Image progressFillImage;
     [SerializeField] private TMP_Text progressText;
 
+    // Puts this panel into its default ready state.
     public override void SetUp()
     {
         base.SetUp();
@@ -14,12 +15,14 @@ public class PanelLoading : UICanvas
         SetProgress(0f);
     }
 
+    // Shows this panel and refreshes its visible state.
     public override void Open()
     {
         BindReferences();
         base.Open();
     }
 
+    // Updates the progress.
     public void SetProgress(float progress)
     {
         BindReferences();

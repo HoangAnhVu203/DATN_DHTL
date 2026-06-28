@@ -33,6 +33,7 @@ public class Spawner : MonoBehaviour
     private int NetworkId => networkId != 0 ? networkId : ComputeStableNetworkId();
     public int NetworkIdValue => NetworkId;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         Transform root = spawnPointRoot != null ? spawnPointRoot : transform.parent;
@@ -50,6 +51,7 @@ public class Spawner : MonoBehaviour
         );
     }
 
+    // Spawns this enemy group when activated.
     public void SpawnCharacters()
     {
         Debug.Log(
@@ -88,6 +90,7 @@ public class Spawner : MonoBehaviour
         SpawnOfflineCharacters();
     }
 
+    // Spawns the from network request.
     private void SpawnFromNetworkRequest(PlayerRef activatingPlayer)
     {
         Debug.Log(
@@ -134,6 +137,7 @@ public class Spawner : MonoBehaviour
         SpawnNetworkCharacters(networkRunner);
     }
 
+    // Spawns the offline characters.
     private void SpawnOfflineCharacters()
     {
         foreach (SpawnPoint point in spawnPointList)
@@ -176,6 +180,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Spawns the network characters.
     private int SpawnNetworkCharacters(NetworkRunner networkRunner)
     {
         int spawnedCount = 0;
@@ -256,6 +261,7 @@ public class Spawner : MonoBehaviour
         return spawnedCount;
     }
 
+    // Spawns the offline character.
     private void SpawnOfflineCharacter(SpawnPoint point)
     {
         Vector3 spawnPosition = ResolveSpawnPosition(point);
@@ -282,6 +288,7 @@ public class Spawner : MonoBehaviour
         spawnedCharacter.PlaySpawnDissolve();
     }
 
+    // Applies the difficulty to spawned character.
     private void ApplyDifficultyToSpawnedCharacter(Character spawnedCharacter, NetworkObject spawnedNetworkObject)
     {
         if (!enableDifficultyScaling || spawnedCharacter == null)
@@ -330,6 +337,7 @@ public class Spawner : MonoBehaviour
         );
     }
 
+    // Calculates the damage multiplier.
     private float CalculateDamageMultiplier(float difficultyMultiplier)
     {
         if (!scaleEnemyDamage)
@@ -340,6 +348,7 @@ public class Spawner : MonoBehaviour
         return Mathf.Clamp(difficultyMultiplier, 1f, Mathf.Max(1f, maxDamageMultiplier));
     }
 
+    // Calculates the difficulty multiplier.
     private float CalculateDifficultyMultiplier()
     {
         if (!enableDifficultyScaling)
@@ -360,6 +369,7 @@ public class Spawner : MonoBehaviour
         return Mathf.Clamp(multiplier, 1f, Mathf.Max(1f, maxDifficultyMultiplier));
     }
 
+    // Returns the expected player count.
     private int GetExpectedPlayerCount()
     {
         if (OnlineRoomSession.ExpectedMatchPlayerCount > 0)
@@ -375,6 +385,7 @@ public class Spawner : MonoBehaviour
         return Mathf.Max(1, FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None).Length);
     }
 
+    // Refreshes the enemy target.
     private void RefreshEnemyTarget(Character spawnedCharacter)
     {
         if (spawnedCharacter is Enemy spawnedEnemy)
@@ -383,6 +394,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Chooses a valid world position for a spawn point.
     private Vector3 ResolveSpawnPosition(SpawnPoint point)
     {
         Vector3 position = point != null ? point.transform.position : transform.position;
@@ -407,6 +419,7 @@ public class Spawner : MonoBehaviour
         return position;
     }
 
+    // Tries to project down to nav mesh.
     private bool TryProjectDownToNavMesh(Vector3 position, out Vector3 projectedPosition)
     {
         float projectionDistance = Mathf.Max(0.1f, navMeshProjectionDistance);
@@ -454,6 +467,7 @@ public class Spawner : MonoBehaviour
         return null;
     }
 
+    // Tracks enemy deaths spawned by this spawner.
     private void OnSpawnedCharacterDied(Character spawnedCharacter)
     {
         spawnedCharacter.Died -= OnSpawnedCharacterDied;
@@ -466,6 +480,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Marks this spawner as cleared and opens its gate.
     private void ClearSpawner()
     {
         if (hasCleared)
@@ -481,6 +496,7 @@ public class Spawner : MonoBehaviour
         Cleared?.Invoke(this);
     }
 
+    // Forces the clear from network.
     private void ForceClearFromNetwork()
     {
         if (hasCleared)
@@ -496,6 +512,7 @@ public class Spawner : MonoBehaviour
         Cleared?.Invoke(this);
     }
 
+    // Opens the gate tied to this area.
     private void OpenGate()
     {
         if (gatesToOpen == null)
@@ -518,6 +535,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Broadcasts the clear to network.
     private void BroadcastClearToNetwork()
     {
         NetworkRunner networkRunner = FindActiveNetworkRunner();
@@ -540,6 +558,7 @@ public class Spawner : MonoBehaviour
         Debug.LogWarning($"Spawner[{NetworkId}] '{name}': no FusionPlayerAvatar available to broadcast clear.");
     }
 
+    // Broadcasts the spawn request to network.
     private void BroadcastSpawnRequestToNetwork()
     {
         if (Time.time < nextSpawnRequestTime)
@@ -589,6 +608,7 @@ public class Spawner : MonoBehaviour
         return fallbackAvatar;
     }
 
+    // Opens the gate tied to this area.
     public static void OpenGatesForNetworkId(int spawnerNetworkId)
     {
         Spawner[] spawners = FindObjectsByType<Spawner>(FindObjectsSortMode.None);
@@ -602,11 +622,13 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Spawns the for network id.
     public static void SpawnForNetworkId(int spawnerNetworkId)
     {
         SpawnForNetworkId(spawnerNetworkId, PlayerRef.None);
     }
 
+    // Spawns the for network id.
     public static void SpawnForNetworkId(int spawnerNetworkId, PlayerRef activatingPlayer)
     {
         Spawner[] spawners = FindObjectsByType<Spawner>(FindObjectsSortMode.None);
@@ -620,6 +642,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Computes the stable network id.
     private int ComputeStableNetworkId()
     {
         unchecked
@@ -639,6 +662,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Returns the hierarchy path.
     private string GetHierarchyPath(Transform current)
     {
         if (current == null)
@@ -657,6 +681,7 @@ public class Spawner : MonoBehaviour
         return path;
     }
 
+    // Handles the first contact with another collider.
     private void OnTriggerEnter(Collider other)
     {
         FusionPlayerAvatar playerAvatar = other.GetComponentInParent<FusionPlayerAvatar>();
@@ -685,6 +710,7 @@ public class Spawner : MonoBehaviour
         }
     }
 
+    // Draws editor helper visuals for this object.
     public void OnDrawGizmos()
     {
         if (collider == null)

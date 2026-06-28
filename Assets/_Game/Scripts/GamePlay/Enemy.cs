@@ -29,6 +29,7 @@ public class Enemy : Character
     private float EffectiveAttackRange => Mathf.Max(attackRange, stoppingDistance);
     protected override bool CanBecomeInvincible => false;
 
+    // Sets up this component before gameplay starts.
     protected override void Awake()
     {
         base.Awake();
@@ -45,16 +46,19 @@ public class Enemy : Character
         RefreshClosestPlayerTarget();
     }
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         RegisterActiveEnemy();
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         ActiveEnemies.Remove(this);
     }
 
+    // Applies the runtime move speed multiplier.
     public override void ApplyRuntimeMoveSpeedMultiplier(float multiplier)
     {
         base.ApplyRuntimeMoveSpeedMultiplier(multiplier);
@@ -68,6 +72,7 @@ public class Enemy : Character
         agent.acceleration = MoveSpeed * 4f;
     }
 
+    // Returns the chase direction toward the current target.
     protected override Vector3 GetMoveDirection()
     {
         if (!UseExternalMovementTick && (target == null || Time.time >= nextTargetRefreshTime))
@@ -127,6 +132,7 @@ public class Enemy : Character
         return lastMoveDirection;
     }
 
+    // Syncs enemy navigation after movement.
     protected override void AfterMove()
     {
         if (agent != null && agent.isOnNavMesh)
@@ -135,6 +141,7 @@ public class Enemy : Character
         }
     }
 
+    // Updates the target.
     public void SetTarget(Transform newTarget)
     {
         if (target == newTarget)
@@ -154,6 +161,7 @@ public class Enemy : Character
         nextRepathTime = 0f;
     }
 
+    // Keeps the NavMeshAgent aligned with the transform.
     public void SyncAgentToTransform()
     {
         if (agent == null || !agent.enabled || !agent.isOnNavMesh)
@@ -168,6 +176,7 @@ public class Enemy : Character
         nextRepathTime = 0f;
     }
 
+    // Refreshes the closest player target.
     public void RefreshClosestPlayerTarget()
     {
         nextTargetRefreshTime = Time.time + Mathf.Max(0.05f, targetRefreshInterval);
@@ -213,6 +222,7 @@ public class Enemy : Character
         SetTarget(closestTarget);
     }
 
+    // Checks whether the enemy can reach the target.
     private bool CanReachTarget(Transform candidateTarget)
     {
         if (candidateTarget == null || agent == null || !agent.isOnNavMesh)
@@ -236,6 +246,7 @@ public class Enemy : Character
         return reusablePath.status == NavMeshPathStatus.PathComplete;
     }
 
+    // Starts the attack action when the character can act.
     public void AttackAnimationEnds()
     {
         if (CurrentState == CharacterState.Attack)
@@ -244,16 +255,19 @@ public class Enemy : Character
         }
     }
 
+    // Updates the idle state while it is active.
     protected override void OnUpdateIdle(float deltaTime)
     {
         TryEnterAttackState();
     }
 
+    // Updates the run state while it is active.
     protected override void OnUpdateRun(float deltaTime)
     {
         TryEnterAttackState();
     }
 
+    // Sets up the dead state.
     protected override void OnEnterDead()
     {
         base.OnEnterDead();
@@ -275,6 +289,7 @@ public class Enemy : Character
         lastMoveDirection = Vector3.zero;
     }
 
+    // Sets up the hurt state.
     protected override void OnEnterHurt()
     {
         base.OnEnterHurt();
@@ -291,6 +306,7 @@ public class Enemy : Character
         }
     }
 
+    // Sets up the attack state.
     protected override void OnEnterAttack()
     {
         attackTimer = Mathf.Max(attackDuration, 0f);
@@ -299,6 +315,7 @@ public class Enemy : Character
         SetAnimatorTrigger(AttackParameter);
     }
 
+    // Updates the attack state while it is active.
     protected override void OnUpdateAttack(float deltaTime)
     {
         if (HasAnimator())
@@ -314,6 +331,7 @@ public class Enemy : Character
         }
     }
 
+    // Tries to enter attack state.
     private void TryEnterAttackState()
     {
         if (IsTargetInAttackRange())
@@ -322,6 +340,7 @@ public class Enemy : Character
         }
     }
 
+    // Checks whether the target is inside attack range.
     private bool IsTargetInAttackRange()
     {
         if (target == null)
@@ -336,6 +355,7 @@ public class Enemy : Character
         return offset.sqrMagnitude <= effectiveAttackRange * effectiveAttackRange;
     }
 
+    // Turns toward the current target.
     private void FaceTarget(float deltaTime)
     {
         if (target == null)
@@ -355,6 +375,7 @@ public class Enemy : Character
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, attackTurnSpeed * deltaTime);
     }
 
+    // Stops the agent path process.
     private void StopAgentPath()
     {
         if (agent != null && agent.isOnNavMesh && agent.hasPath)
@@ -365,6 +386,7 @@ public class Enemy : Character
         lastMoveDirection = Vector3.zero;
     }
 
+    // Disables the colliders.
     private void DisableColliders()
     {
         Collider[] colliders = GetComponentsInChildren<Collider>();
@@ -375,6 +397,7 @@ public class Enemy : Character
         }
     }
 
+    // Registers the active enemy.
     private void RegisterActiveEnemy()
     {
         ActiveEnemies.RemoveAll(enemy => enemy == null);
@@ -387,6 +410,7 @@ public class Enemy : Character
         ActiveEnemies.Add(this);
     }
 
+    // Applies the enemy separation.
     private Vector3 ApplyEnemySeparation(Vector3 desiredDirection)
     {
         float radius = Mathf.Max(0f, enemySeparationRadius);

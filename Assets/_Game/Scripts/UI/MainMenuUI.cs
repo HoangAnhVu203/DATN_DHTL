@@ -19,6 +19,7 @@ public class MainMenuUI : MonoBehaviour
     private bool isLoading;
     private bool isLoggingOut;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         if (informationPlayerButton == null)
@@ -74,6 +75,7 @@ public class MainMenuUI : MonoBehaviour
         RefreshCoinText();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         if (informationPlayerButton != null)
@@ -94,6 +96,7 @@ public class MainMenuUI : MonoBehaviour
         SupabaseSession.CoinChanged -= OnSessionCoinChanged;
     }
 
+    // Starts the game process.
     public void StartGame()
     {
         if (isLoading)
@@ -109,12 +112,13 @@ public class MainMenuUI : MonoBehaviour
 
         OnlineRoomSession.Clear();
         isLoading = true;
-
+        // spawn loading scene
         SceneLoadingRunner loadingRunner = new GameObject("Scene Loading Runner").AddComponent<SceneLoadingRunner>();
         DontDestroyOnLoad(loadingRunner.gameObject);
         loadingRunner.LoadScene(gameSceneName, minimumLoadingTime, loadingPanelPrefab, () => isLoading = false);
     }
 
+    // Opens the information panel UI.
     private void OpenInformationPanel()
     {
         if (!SupabaseSession.IsLoggedIn)
@@ -126,6 +130,7 @@ public class MainMenuUI : MonoBehaviour
         PanelInformation.OpenFromScene();
     }
 
+    // Opens the match history panel UI.
     private void OpenMatchHistoryPanel()
     {
         if (!SupabaseSession.IsLoggedIn)
@@ -137,6 +142,7 @@ public class MainMenuUI : MonoBehaviour
         PanelMatchHistory.OpenFromScene();
     }
 
+    // Signs out and returns the menu to logged-out state.
     public void Logout()
     {
         if (isLoggingOut)
@@ -147,6 +153,7 @@ public class MainMenuUI : MonoBehaviour
         StartCoroutine(LogoutRoutine());
     }
 
+    // Runs the logout coroutine.
     private IEnumerator LogoutRoutine()
     {
         isLoggingOut = true;
@@ -184,6 +191,7 @@ public class MainMenuUI : MonoBehaviour
         }
     }
 
+    // Refreshes the logged out view.
     private void RefreshLoggedOutView()
     {
         if (panelLogin == null)
@@ -208,6 +216,7 @@ public class MainMenuUI : MonoBehaviour
         RefreshCoinText();
     }
 
+    // Clears the room ui state.
     private void ClearRoomUiState()
     {
         PanelRoomTest[] roomPanels = FindObjectsByType<PanelRoomTest>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -229,6 +238,7 @@ public class MainMenuUI : MonoBehaviour
         }
     }
 
+    // Updates the menu buttons interactable.
     private void SetMenuButtonsInteractable(bool interactable)
     {
         if (informationPlayerButton != null)
@@ -287,11 +297,13 @@ public class MainMenuUI : MonoBehaviour
         return null;
     }
 
+    // Refreshes the menu coin display after coin changes.
     private void OnSessionCoinChanged(int coin)
     {
         RefreshCoinText();
     }
 
+    // Refreshes the coin text.
     private void RefreshCoinText()
     {
         if (coinText != null)
@@ -305,12 +317,14 @@ public class SceneLoadingRunner : MonoBehaviour
 {
     private System.Action onLoadFailed;
 
+    // Loads the requested scene.
     public void LoadScene(string sceneName, float minimumLoadingTime, PanelLoading loadingPanelPrefab, System.Action onLoadFailed = null)
     {
         this.onLoadFailed = onLoadFailed;
         StartCoroutine(LoadSceneRoutine(sceneName, minimumLoadingTime, loadingPanelPrefab));
     }
 
+    // Runs the load scene coroutine.
     private IEnumerator LoadSceneRoutine(string sceneName, float minimumLoadingTime, PanelLoading loadingPanelPrefab)
     {
         Time.timeScale = 1f;
@@ -381,6 +395,7 @@ public class SceneLoadingRunner : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Creates the loading panel.
     private PanelLoading CreateLoadingPanel(PanelLoading loadingPanelPrefab)
     {
         Canvas loadingCanvas = new GameObject("Loading Canvas").AddComponent<Canvas>();

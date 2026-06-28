@@ -1,0 +1,1 @@
+TABLE 26 ROW 3: "host_user_id | uuid | FK | M\u00e3 ng\u01b0\u1eddi ch\u01a1i t\u1ea1o ph\u00f2ng, tham chi\u1ebfu \u0111\u1ebfn b\u1ea3ng\u00a0users."

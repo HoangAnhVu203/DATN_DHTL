@@ -26,6 +26,7 @@ public class PanelRoomMatch : UICanvas
     private bool isLoadingMatchScene;
     private bool roomRefreshInProgress;
 
+    // Stores the room service and room data for this panel.
     public void SetRoom(RoomService service, RoomService.RoomData room)
     {
         roomService = service;
@@ -40,6 +41,7 @@ public class PanelRoomMatch : UICanvas
         StartRefreshing();
     }
 
+    // Shows this panel and refreshes its visible state.
     public override void Open()
     {
         base.Open();
@@ -56,12 +58,14 @@ public class PanelRoomMatch : UICanvas
         }
     }
 
+    // Closes this panel immediately.
     public override void CloseDirectly()
     {
         StopRefreshing();
         base.CloseDirectly();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         StopRefreshing();
@@ -148,6 +152,7 @@ public class PanelRoomMatch : UICanvas
         }
     }
 
+    // Resets the runtime state.
     private void ResetRuntimeState()
     {
         StopRefreshing();
@@ -158,12 +163,14 @@ public class PanelRoomMatch : UICanvas
         roomRefreshInProgress = false;
     }
 
+    // Starts polling room state.
     private void StartRefreshing()
     {
         StopRefreshing();
         refreshCoroutine = StartCoroutine(RefreshRoutine());
     }
 
+    // Stops the refreshing process.
     private void StopRefreshing()
     {
         if (refreshCoroutine == null)
@@ -175,6 +182,7 @@ public class PanelRoomMatch : UICanvas
         refreshCoroutine = null;
     }
 
+    // Runs the refresh coroutine.
     private IEnumerator RefreshRoutine()
     {
         while (gameObject.activeInHierarchy && OnlineRoomSession.IsInRoom)
@@ -185,6 +193,7 @@ public class PanelRoomMatch : UICanvas
         }
     }
 
+    // Refreshes the room state.
     private void RefreshRoomState()
     {
         if (roomRefreshInProgress || roomService == null || !OnlineRoomSession.IsInRoom)
@@ -195,6 +204,7 @@ public class PanelRoomMatch : UICanvas
         StartCoroutine(RefreshRoomStateRoutine());
     }
 
+    // Runs the refresh room state coroutine.
     private IEnumerator RefreshRoomStateRoutine()
     {
         roomRefreshInProgress = true;
@@ -211,6 +221,7 @@ public class PanelRoomMatch : UICanvas
         roomRefreshInProgress = false;
     }
 
+    // Refreshes the players.
     private void RefreshPlayers()
     {
         if (roomService == null || !OnlineRoomSession.IsInRoom)
@@ -221,6 +232,7 @@ public class PanelRoomMatch : UICanvas
         StartCoroutine(roomService.GetRoomPlayers(OnlineRoomSession.RoomId, OnRoomPlayersLoaded));
     }
 
+    // Handles the loaded room players data.
     private void OnRoomPlayersLoaded(bool success, List<RoomService.RoomPlayerData> players, string error)
     {
         if (!success)
@@ -277,6 +289,7 @@ public class PanelRoomMatch : UICanvas
         RefreshActionButton();
     }
 
+    // Updates host state from the room player list.
     private void SyncHostFromPlayers(List<RoomService.RoomPlayerData> players)
     {
         if (players == null)
@@ -294,6 +307,7 @@ public class PanelRoomMatch : UICanvas
         }
     }
 
+    // Checks whether the room already has a started match.
     private void CheckForStartedMatch()
     {
         if (matchCheckInProgress || isLoadingMatchScene || roomService == null || !OnlineRoomSession.IsInRoom)
@@ -305,6 +319,7 @@ public class PanelRoomMatch : UICanvas
         StartCoroutine(roomService.GetActiveMatch(OnlineRoomSession.RoomId, OnActiveMatchLoaded));
     }
 
+    // Handles the loaded active match data.
     private void OnActiveMatchLoaded(bool success, RoomService.MatchData data, string error)
     {
         matchCheckInProgress = false;
@@ -333,6 +348,7 @@ public class PanelRoomMatch : UICanvas
         BeginLoadMatch(data);
     }
 
+    // Loads the avatar.
     private IEnumerator LoadAvatar(string avatarUrl, PlayerSlotView slot)
     {
         using UnityWebRequest request = UnityWebRequestTexture.GetTexture(avatarUrl);
@@ -389,11 +405,13 @@ public class PanelRoomMatch : UICanvas
         localAvatarSprites = sprites.ToArray();
     }
 
+    // Checks whether the avatar key points to a local sprite.
     private bool IsLocalAvatarKey(string avatarKey)
     {
         return !string.IsNullOrWhiteSpace(avatarKey) && avatarKey.StartsWith("avatar_");
     }
 
+    // Returns the local avatar sprite.
     private Sprite GetLocalAvatarSprite(string avatarKey)
     {
         ResolveLocalAvatarSprites();
@@ -412,6 +430,7 @@ public class PanelRoomMatch : UICanvas
         return localAvatarSprites[index];
     }
 
+    // Returns the default avatar sprite.
     private Sprite GetDefaultAvatarSprite()
     {
         if (defaultAvatarSprite != null)
@@ -423,6 +442,7 @@ public class PanelRoomMatch : UICanvas
         return localAvatarSprites != null && localAvatarSprites.Length > 0 ? localAvatarSprites[0] : null;
     }
 
+    // Handles the leave room click.
     private void OnLeaveRoomClicked()
     {
         if (actionInProgress || roomService == null || !OnlineRoomSession.IsInRoom)
@@ -435,6 +455,7 @@ public class PanelRoomMatch : UICanvas
         StartCoroutine(roomService.LeaveRoom(OnlineRoomSession.RoomId, OnLeaveRoomCompleted));
     }
 
+    // Handles the leave room request result.
     private void OnLeaveRoomCompleted(bool success, string error)
     {
         actionInProgress = false;
@@ -450,6 +471,7 @@ public class PanelRoomMatch : UICanvas
         CloseDirectly();
     }
 
+    // Handles the action button click.
     private void OnActionButtonClicked()
     {
         if (actionInProgress || roomService == null || !OnlineRoomSession.IsInRoom)
@@ -469,6 +491,7 @@ public class PanelRoomMatch : UICanvas
         StartCoroutine(roomService.SetReady(OnlineRoomSession.RoomId, !localPlayerReady, OnReadyCompleted));
     }
 
+    // Runs the start match as host coroutine.
     private IEnumerator StartMatchAsHostRoutine()
     {
         bool hostReadySuccess = false;
@@ -491,6 +514,7 @@ public class PanelRoomMatch : UICanvas
         yield return roomService.StartMatch(OnlineRoomSession.RoomId, OnStartMatchCompleted);
     }
 
+    // Handles the ready request result.
     private void OnReadyCompleted(bool success, RoomService.ReadyData data, string error)
     {
         actionInProgress = false;
@@ -507,6 +531,7 @@ public class PanelRoomMatch : UICanvas
         RefreshPlayers();
     }
 
+    // Handles the start match request result.
     private void OnStartMatchCompleted(bool success, RoomService.MatchData data, string error)
     {
         actionInProgress = false;
@@ -528,6 +553,7 @@ public class PanelRoomMatch : UICanvas
         BeginLoadMatch(data);
     }
 
+    // Starts loading the active match scene.
     private void BeginLoadMatch(RoomService.MatchData match)
     {
         if (isLoadingMatchScene)
@@ -543,6 +569,7 @@ public class PanelRoomMatch : UICanvas
         OnlineMatchLoadingOverlay.LoadScene(gameSceneName);
     }
 
+    // Refreshes the action button.
     private void RefreshActionButton()
     {
         if (actionButtonText == null)
@@ -559,6 +586,7 @@ public class PanelRoomMatch : UICanvas
         actionButtonText.text = localPlayerReady ? "Unready" : "Ready";
     }
 
+    // Refreshes the room code text.
     private void RefreshRoomCodeText()
     {
         if (roomCodeText == null)
@@ -571,6 +599,7 @@ public class PanelRoomMatch : UICanvas
             : $"Room Code: {OnlineRoomSession.RoomCode}";
     }
 
+    // Updates the buttons interactable.
     private void SetButtonsInteractable(bool interactable)
     {
         if (leaveRoomButton != null)
@@ -604,6 +633,7 @@ public class PanelRoomMatch : UICanvas
         private readonly Text nameText;
         private readonly Sprite defaultAvatarSprite;
 
+        // Plays the er slot view.
         public PlayerSlotView(Transform slotTransform, Sprite fallbackAvatar)
         {
             root = slotTransform.gameObject;
@@ -613,6 +643,7 @@ public class PanelRoomMatch : UICanvas
             Clear();
         }
 
+        // Displays this view with the supplied data.
         public void Show(RoomService.RoomPlayerData player)
         {
             root.SetActive(true);
@@ -636,6 +667,7 @@ public class PanelRoomMatch : UICanvas
             SetAvatar(defaultAvatarSprite);
         }
 
+        // Resets this view back to an empty state.
         public void Clear()
         {
             root.SetActive(false);
@@ -648,6 +680,7 @@ public class PanelRoomMatch : UICanvas
             SetAvatar(defaultAvatarSprite);
         }
 
+        // Updates the avatar.
         public void SetAvatar(Sprite avatar)
         {
             if (avatarImage != null)

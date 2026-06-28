@@ -13,6 +13,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
     private string returningResult;
     private bool returningPlayerWasHost;
 
+    // Starts the return process.
     public static void StartReturn()
     {
         ReturnToRoomAfterMatch existingRunner = FindFirstObjectByType<ReturnToRoomAfterMatch>();
@@ -27,6 +28,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         runnerObject.AddComponent<ReturnToRoomAfterMatch>().ReturnToRoom();
     }
 
+    // Returns the player to the room after a match.
     public void ReturnToRoom()
     {
         if (isReturning)
@@ -38,6 +40,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         StartCoroutine(ReturnRoutine());
     }
 
+    // Runs the room return cleanup and loading steps.
     private IEnumerator ReturnRoutine()
     {
         Time.timeScale = 1f;
@@ -91,6 +94,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Resets the room state after match.
     private IEnumerator ResetRoomStateAfterMatch()
     {
         if (string.IsNullOrWhiteSpace(returningRoomId))
@@ -156,6 +160,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         }
     }
 
+    // Opens the room panel UI.
     private void OpenRoomPanel()
     {
         if (!OnlineRoomSession.IsInRoom)
@@ -181,6 +186,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         panel.SetRoom(roomService, BuildCurrentRoomData());
     }
 
+    // Chooses the result string to send back to the room service.
     private string ResolveMatchResult()
     {
         if (GameManager.Instance != null)
@@ -199,6 +205,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         return "finished";
     }
 
+    // Opens the room match panel UI.
     private PanelRoomMatch OpenRoomMatchPanel()
     {
         UIManager uiManager = FindFirstObjectByType<UIManager>();
@@ -220,6 +227,7 @@ public class ReturnToRoomAfterMatch : MonoBehaviour
         return panel;
     }
 
+    // Builds the current room data.
     private RoomService.RoomData BuildCurrentRoomData()
     {
         return new RoomService.RoomData

@@ -12,6 +12,7 @@ public class OnlineSessionCleanup : MonoBehaviour
 
     private SupabaseConfig config;
 
+    // Ensures the is ready.
     public static OnlineSessionCleanup Ensure(SupabaseConfig config)
     {
         if (instance == null)
@@ -25,34 +26,40 @@ public class OnlineSessionCleanup : MonoBehaviour
         return instance;
     }
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         Application.wantsToQuit -= OnWantsToQuit;
         Application.wantsToQuit += OnWantsToQuit;
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         Application.wantsToQuit -= OnWantsToQuit;
     }
 
+    // Starts cleanup before the app quits.
     private bool OnWantsToQuit()
     {
         CleanupOnQuit();
         return true;
     }
 
+    // Runs the cleanup on quit step.
     public void CleanupOnQuit()
     {
         SendCleanupRequestBlocking();
         OnlineRoomSession.Clear();
     }
 
+    // Runs final cleanup when the app quits.
     private void OnApplicationQuit()
     {
         CleanupOnQuit();
     }
 
+    // Sends the cleanup request blocking.
     private void SendCleanupRequestBlocking()
     {
         if (!CanCleanup())
@@ -91,6 +98,7 @@ public class OnlineSessionCleanup : MonoBehaviour
         }
     }
 
+    // Checks whether cleanup can run right now.
     private bool CanCleanup()
     {
         return config != null

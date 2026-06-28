@@ -9,11 +9,13 @@ public class RoomService : MonoBehaviour
 {
     [SerializeField] private SupabaseConfig config;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         SupabaseSession.SetConfig(config);
     }
 
+    // Creates a new room through the backend service.
     public IEnumerator CreateRoom(int maxPlayers, Action<bool, RoomData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new CreateRoomRequest
@@ -27,6 +29,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Joins an existing room by code.
     public IEnumerator JoinRoom(string roomCode, Action<bool, RoomData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new JoinRoomRequest
@@ -40,6 +43,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Updates the local ready state in the room.
     public IEnumerator SetReady(string roomId, bool isReady, Action<bool, ReadyData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new SetReadyRequest
@@ -54,6 +58,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Removes the local player from the room.
     public IEnumerator LeaveRoom(string roomId, Action<bool, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new RoomIdRequest
@@ -67,6 +72,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Keeps the local room presence alive.
     public IEnumerator SendRoomHeartbeat(string roomId, Action<bool, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new RoomIdRequest
@@ -80,6 +86,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Clears room players that stopped sending heartbeats.
     public IEnumerator CleanupInactiveRoomPlayers(string roomId, int timeoutSeconds, Action<bool, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new CleanupInactiveRequest
@@ -94,6 +101,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Moves the room into a running match.
     public IEnumerator StartMatch(string roomId, Action<bool, MatchData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new RoomIdRequest
@@ -107,6 +115,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Marks the active match as ended with its result.
     public IEnumerator EndMatch(string matchId, string result, Action<bool, MatchData, string> callback)
     {
         string jsonBody = JsonUtility.ToJson(new EndMatchRequest
@@ -122,6 +131,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Loads the latest active match for a room.
     public IEnumerator GetActiveMatch(string roomId, Action<bool, MatchData, string> callback)
     {
         if (!EnsureReady(callback))
@@ -145,6 +155,7 @@ public class RoomService : MonoBehaviour
         });
     }
 
+    // Returns the room to waiting state after a match.
     public IEnumerator ResetRoomAfterMatch(string roomId, string matchId, string result, bool resetAllPlayersReady, Action<bool, string> callback)
     {
         if (!EnsureReady(callback))
@@ -241,6 +252,7 @@ public class RoomService : MonoBehaviour
         callback?.Invoke(allSucceeded, errorBuilder.ToString());
     }
 
+    // Clears local ready state after leaving match flow.
     public IEnumerator ForceResetLocalReady(string roomId, Action<bool, string> callback)
     {
         if (!EnsureReady(callback))
@@ -261,6 +273,7 @@ public class RoomService : MonoBehaviour
         yield return PatchRest(url, "{\"is_ready\":false}", callback);
     }
 
+    // Loads and combines the room player list.
     public IEnumerator GetRoomPlayers(string roomId, Action<bool, List<RoomPlayerData>, string> callback)
     {
         if (!EnsureReady(callback))
@@ -384,6 +397,7 @@ public class RoomService : MonoBehaviour
         callback?.Invoke(true, response, null);
     }
 
+    // Sends an authenticated GET request.
     private IEnumerator GetRest(string url, Action<bool, string, string> callback)
     {
         using UnityWebRequest request = UnityWebRequest.Get(url);
@@ -405,6 +419,7 @@ public class RoomService : MonoBehaviour
         callback?.Invoke(true, responseText, null);
     }
 
+    // Sends an authenticated PATCH request.
     private IEnumerator PatchRest(string url, string jsonBody, Action<bool, string> callback)
     {
         using UnityWebRequest request = new UnityWebRequest(url, "PATCH");
@@ -449,6 +464,7 @@ public class RoomService : MonoBehaviour
         return true;
     }
 
+    // Stops backend work when the service is not configured.
     private bool EnsureReady(Action<bool, List<RoomPlayerData>, string> callback)
     {
         if (config == null)
@@ -466,6 +482,7 @@ public class RoomService : MonoBehaviour
         return true;
     }
 
+    // Stops backend work when the service is not configured.
     private bool EnsureReady(Action<bool, string> callback)
     {
         if (config == null)
@@ -483,6 +500,7 @@ public class RoomService : MonoBehaviour
         return true;
     }
 
+    // Turns request errors into a readable message.
     private string BuildErrorMessage(long statusCode, string requestError, string responseText)
     {
         if (!string.IsNullOrWhiteSpace(responseText))
@@ -498,6 +516,7 @@ public class RoomService : MonoBehaviour
         return $"HTTP {statusCode}: Supabase request failed.";
     }
 
+    // Adds a non-empty error to the combined message.
     private void AppendError(StringBuilder builder, string error)
     {
         if (string.IsNullOrWhiteSpace(error))
@@ -513,6 +532,7 @@ public class RoomService : MonoBehaviour
         builder.Append(error);
     }
 
+    // Builds an `in` filter for Supabase queries.
     private string BuildInFilter(RoomMembership[] memberships)
     {
         StringBuilder builder = new StringBuilder();
@@ -541,6 +561,7 @@ public class RoomService : MonoBehaviour
         return wrapper?.items ?? Array.Empty<T>();
     }
 
+    // Builds result records for all room players.
     private EndMatchPlayerData[] BuildEndMatchPlayers(string result)
     {
         OnlineMatchStats.EnsureStarted();
@@ -750,6 +771,7 @@ public class RoomService : MonoBehaviour
         public string username;
         public string avatar_url;
 
+        // Returns the display name.
         public string GetDisplayName()
         {
             if (!string.IsNullOrWhiteSpace(display_name))

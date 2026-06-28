@@ -9,6 +9,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
 
     private readonly List<GameObject> spawnedRows = new List<GameObject>();
 
+    // Rebuilds the match result rows from the latest stats.
     public void Render()
     {
         ResolveReferences();
@@ -54,6 +55,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
         }
     }
 
+    // Creates the row.
     private GameObject CreateRow()
     {
         if (rowPrefab != null)
@@ -64,6 +66,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
         return CreateFallbackRow();
     }
 
+    // Creates the fallback row.
     private GameObject CreateFallbackRow()
     {
         GameObject row = new GameObject("LeaderboardContentUI", typeof(RectTransform), typeof(HorizontalLayoutGroup));
@@ -89,6 +92,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
         return row;
     }
 
+    // Creates the text.
     private void CreateText(Transform parent, string textName)
     {
         GameObject textObject = new GameObject(textName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(LayoutElement));
@@ -108,6 +112,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
         layoutElement.flexibleWidth = textName == "Display Name" ? 2f : 1f;
     }
 
+    // Updates the text.
     private void SetText(GameObject row, string childName, string value)
     {
         Transform child = FindChild(row.transform, childName);
@@ -137,6 +142,7 @@ public class MatchResultLeaderboardRenderer : MonoBehaviour
         return null;
     }
 
+    // Clears the rows.
     private void ClearRows()
     {
         foreach (GameObject row in spawnedRows)

@@ -22,6 +22,7 @@ public class DamageCaster : MonoBehaviour
     private bool controlledDamageWindowActive;
     private int baseDamage;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         baseDamage = Mathf.Max(0, damage);
@@ -37,6 +38,7 @@ public class DamageCaster : MonoBehaviour
         damageTargetIdSet = new HashSet<int>();
     }
 
+    // Applies the damage multiplier.
     public void ApplyDamageMultiplier(float multiplier)
     {
         float safeMultiplier = Mathf.Max(0.1f, multiplier);
@@ -48,16 +50,19 @@ public class DamageCaster : MonoBehaviour
         damage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * safeMultiplier));
     }
 
+    // Handles the first contact with another collider.
     private void OnTriggerEnter(Collider other)
     {
         TryApplyDamage(other);
     }
 
+    // Processes a collider while it stays inside the trigger.
     private void OnTriggerStay(Collider other)
     {
         TryApplyDamage(other);
     }
 
+    // Tries to apply damage.
     private void TryApplyDamage(Collider other)
     {
         if (ownerNetworkAvatar != null && !ownerNetworkAvatar.CanApplyDamageLocally)
@@ -123,6 +128,7 @@ public class DamageCaster : MonoBehaviour
         MarkDamagedTarget(targetCharacter);
     }
 
+    // Tries to apply enemy damage.
     private void TryApplyEnemyDamage(Collider other, Character targetCharacter, Vector3 attackerPosition)
     {
         FusionEnemyAvatar targetNetworkEnemy = other.GetComponentInParent<FusionEnemyAvatar>();
@@ -160,11 +166,13 @@ public class DamageCaster : MonoBehaviour
         MarkDamagedTarget(targetCharacter);
     }
 
+    // Checks whether damaged target is available.
     private bool HasDamagedTarget(Component target)
     {
         return target != null && damageTargetIdSet.Contains(target.GetInstanceID());
     }
 
+    // Records a target already hit during this damage window.
     private void MarkDamagedTarget(Component target)
     {
         if (target == null)
@@ -180,6 +188,7 @@ public class DamageCaster : MonoBehaviour
         }
     }
 
+    // Checks whether this target was hit recently over the network.
     private bool IsRecentNetworkHit(Component target)
     {
         long key = GetOwnerTargetKey(target);
@@ -197,6 +206,7 @@ public class DamageCaster : MonoBehaviour
         return now - lastHitTime < DuplicateHitLockSeconds;
     }
 
+    // Records a recent network hit to avoid duplicate damage.
     private void MarkRecentNetworkHit(Component target)
     {
         long key = GetOwnerTargetKey(target);
@@ -208,6 +218,7 @@ public class DamageCaster : MonoBehaviour
         RecentNetworkHitTimes[key] = Time.time;
     }
 
+    // Returns the owner target key.
     private long GetOwnerTargetKey(Component target)
     {
         if (target == null)
@@ -220,17 +231,20 @@ public class DamageCaster : MonoBehaviour
         return ((long)ownerId << 32) ^ (uint)targetId;
     }
 
+    // Returns the damage source id.
     private int GetDamageSourceId()
     {
         return ownerRoot != null ? ownerRoot.GetInstanceID() : transform.root.GetInstanceID();
     }
 
+    // Clears the damaged targets.
     private void ClearDamagedTargets()
     {
         damageTargetList.Clear();
         damageTargetIdSet.Clear();
     }
 
+    // Plays the hit vfx.
     private void PlayHitVFX(Collider targetCollider)
     {
         if (ownerVFXManager == null)
@@ -242,6 +256,7 @@ public class DamageCaster : MonoBehaviour
         ownerVFXManager.PlaySlash(hitPosition);
     }
 
+    // Enables the damage caster.
     public void EnableDamageCaster()
     {
         if (ownerNetworkAvatar != null && ownerNetworkAvatar.Object != null && ownerNetworkAvatar.Object.IsValid)
@@ -264,6 +279,7 @@ public class DamageCaster : MonoBehaviour
         damageCasterCollider.enabled = true;
     }
 
+    // Disables the damage caster.
     public void DisableDamageCaster()
     {
         if (controlledDamageWindowActive)
@@ -274,6 +290,7 @@ public class DamageCaster : MonoBehaviour
         ForceDisableDamageCaster();
     }
 
+    // Starts a damage window controlled by animation or network code.
     public void BeginControlledDamageWindow()
     {
         if (!controlledDamageWindowActive)
@@ -285,12 +302,14 @@ public class DamageCaster : MonoBehaviour
         damageCasterCollider.enabled = true;
     }
 
+    // Ends the controlled damage window process.
     public void EndControlledDamageWindow()
     {
         controlledDamageWindowActive = false;
         ForceDisableDamageCaster();
     }
 
+    // Forces the disable damage caster.
     public void ForceDisableDamageCaster()
     {
         controlledDamageWindowActive = false;

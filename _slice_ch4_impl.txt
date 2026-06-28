@@ -1,0 +1,48 @@
+0636	[Heading 1]	TRIỂN KHAI VÀ LẬP TRÌNH HỆ THỐNG
+0637	[Heading 2]	Triển khai hệ thống
+0638	[Content]	Để xây dựng hệ thống game 3D co-op sinh tồn đa người chơi, đồ án sử dụng kết hợp nhiều công cụ và nền tảng khác nhau. Phần client của game được phát triển bằng Unity, phần xử lý dữ liệu và nghiệp vụ phía server sử dụng Supabase, còn phần đồng bộ quá trình chơi thời gian thực trong trận đấu được triển khai bằng Photon Fusion. Việc lựa chọn các công nghệ này giúp hệ thống đáp ứng được yêu cầu về đồ họa 3D, quá trình chơi thời gian thực, quản lý tài khoản, phòng chơi, trận đấu và lưu trữ kết quả.
+0639	[Heading 3]	Môi trường phát triển phía ứng dụng Unity
+0640	[Bullet]	Phía client là ứng dụng game chạy trên máy người chơi. Đây là thành phần chịu trách nhiệm hiển thị giao diện, điều khiển nhân vật, xử lý quá trình chơi, hành động, camera, hiệu ứng và kết nối tới các dịch vụ trực tuyến.
+0641	[Bullet]	Các công cụ và công nghệ được sử dụng gồm:
+0642	[Quote]	Bảng 4.1 Công cụ phát triển Client
+0644	[Bullet]	Trong Unity, hệ thống được tổ chức thành các scene chính như HomeScene hoặc GameScene. HomeScene đảm nhiệm các chức năng ngoài trận đấu như đăng nhập, hiển thị thông tin người chơi, tạo phòng, tham gia phòng và xem lịch sử trận đấu. GameScene là nơi diễn ra quá trình chơi chính, bao gồm điều khiển nhân vật, chiến đấu với kẻ địch, sinh ra đợt kẻ địch, nhặt vật phẩm, hiển thị HUD và xử lý kết quả thắng thua.
+0645	[Bullet]	Các script C# được chia thành nhiều nhóm chức năng, ví dụ:
+0646	[Bullet]	Nhóm Trực tuyến: xử lý kết nối Supabase, phiênngười dùng, phòng chơi, trận đấu và Photon Fusion.
+0647	[Bullet]	Nhóm GamePlay: xử lý nhân vật, kẻ địch, máu, sát thương, vật phẩm, spawner và game manager.
+0648	[Bullet]	Nhóm UI: xử lý giao diện đăng nhập, phòng chơi, quá trình chơi, kết quả, lịch sử trận và bảng xếp hạng.
+0649	[Bullet]	Nhóm Enum: định nghĩa các trạng thái như GameState, CharacterState, PickupState.
+0650	[Bullet]	Cách tổ chức này giúp quá trình triển khai dễ quản lý, dễ mở rộng và thuận tiện cho việc kiểm thử từng chức năng riêng biệt.
+0652	[Heading 3]	Môi trường triển khai phía máy chủ
+0653	[Bullet]	Phía máy chủ của hệ thống sử dụng Supabase. Đây là nền tảng backend-as-a-service cung cấp sẵn các dịch vụ cần thiết như xác thực người dùng, cơ sở dữ liệu PostgreSQL, REST API, Realtime và Edge Functions.
+0654	[Bullet]	Các thành phần phía máy chủ được sử dụng gồm:
+0656	[Quote]	Bảng 4.2 Công cụ phát triển Phía máy chủ
+0658	[Bullet]	Supabase Auth được sử dụng để xác thực người chơi bằng email và mật khẩu. Sau khi đăng nhập thành công, Supabase trả về JWT/session. Unity Client sử dụng token này để gọi các API và Edge Functions.
+0659	[Bullet]	Database PostgreSQL lưu trữ các bảng chính của hệ thống, bao gồm:
+0660	[Bullet]	users: lưu thông tin người chơi.
+0661	[Bullet]	rooms: lưu thông tin phòng chơi.
+0662	[Bullet]	room_players: lưu danh sách người chơi trong phòng.
+0663	[Bullet]	matches: lưu thông tin trận đấu.
+0664	[Bullet]	match_players: lưu kết quả và thống kê của từng người chơi trong trận.
+0665	[Bullet]	Các thao tác quan trọng không được thực hiện trực tiếp từ client xuống cơ sở dữ liệumà thông qua Edge Functions. Ví dụ, khi người chơi tạo phòng, Unity Client gọi function create_room. Function này xác thực JWT, tạo bản ghi phòng mới, thêm người chơi vào phòng với vai trò chủ phòng, sau đó trả về room_id và room_code. Cách làm này giúp phía máy chủ kiểm soát logic nghiệp vụ và hạn chế client ghi dữ liệu không hợp lệ.
+0666	[Heading 3]	Môi trường đồng bộ nhiều người chơi thời gian thực
+0667	[Normal]	Đối với quá trình chơi trong trận đấu, hệ thống sử dụng Photon Fusion để đồng bộ dữ liệu thời gian thựcgiữa các client. Đây là thành phần rất quan trọng vì game co-op yêu cầu nhiều người chơi nhìn thấy trạng thái của nhau gần như ngay lập tức.
+0668	[Normal]	Photon Fusion được dùng để đồng bộ các thành phần sau:
+0669	[Normal]	Vị trí và hướng xoay của người chơi.
+0670	[Normal]	Hành động di chuyển, tấn công và slide.
+0671	[Normal]	Máu và trạng thái sống/chết của người chơi.
+0672	[Normal]	Trạng thái bị hạ và hồi sinh.
+0673	[Normal]	Kẻ địch sinh ra, di chuyển, nhận sát thương và chết.
+0674	[Normal]	Vật phẩm được nhặt trong trận.
+0675	[Normal]	Trạng thái mở gate sau khi clear kẻ địch.
+0676	[Normal]	Kết quả Victory hoặc Lose trong trận.
+0677	[Normal]	Trong hệ thống, sau khi phía máy chủ tạo trận đấu thành công, Unity Client sử dụng match_id làm định danh phiên chơi để tham gia phiên Photon Fusion. Mỗi người chơi khi vào trận sẽ được sinh ra một network player. Các hành động như tấn công, nhận sát thương, hồi sinh, mở cổng hoặc cập nhật kết quả trận được gửi qua cơ chế đồng bộ của Photon Fusion.
+0678	[Normal]	Việc tách Supabase và Photon Fusion theo hai vai trò khác nhau giúp hệ thống hoạt động hiệu quả hơn:
+0679	[Quote]	Bảng 4.3. Công cụ đồng bộ Đa người chơi
+0680	[Normal]	Supabase phù hợp với dữ liệu nghiệp vụ cần lưu trữ lâu dài, trong khi Photon Fusion phù hợp với dữ liệu quá trình chơi thay đổi liên tục như vị trí nhân vật, chiến đấu và trạng thái kẻ địch.
+0681	[Heading 3]	Công cụ quản lý mã nguồn và kiểm thử
+0682	[Content]	Trong quá trình phát triển, đồ án sử dụng Git và GitHub để quản lý mã nguồn. Việc sử dụng Git giúp lưu lại lịch sử thay đổi, dễ dàng theo dõi các mốc phát triển và phục hồi khi có lỗi.
+0683	[Content]	Các công cụ hỗ trợ gồm:
+0684	[Quote]	Bảng 4.4 Công cụ quản lý và kiểm thử
+0685	[Content]	Postman được sử dụng để kiểm thử các function phía máy chủ như create_room, join_room, set_ready, start_match và end_match trước khi tích hợp vào Unity. Supabase Dashboard được sử dụng để theo dõi dữ liệu trong các bảng, kiểm tra tài khoản người chơi, trạng thái phòng, trận đấu và kết quả lưu sau trận.
+0687	[Heading 2]	Kết quả đạt được
+0688	[Content]	Sau quá trình triển khai, hệ thống đã hoàn thành các chức năng chính của một game 3D co-op sinh tồn nhiều người chơi, bao gồm đăng nhập, quản lý người chơi, tạo và tham gia phòng, bắt đầu trận đấu, đồng bộ quá trình chơi thời gian thực, xử lý enemy AI, kết thúc trận, lưu kết quả và hiển thị lịch sử trận đấu.

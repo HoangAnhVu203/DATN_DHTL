@@ -10,6 +10,7 @@ public class DamageOrb : MonoBehaviour
     private bool isDestroyed;
     private int baseDamage;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         baseDamage = Mathf.Max(0, damage);
@@ -17,6 +18,7 @@ public class DamageOrb : MonoBehaviour
         fusionDamageOrb = GetComponent<FusionDamageOrb>();
     }
 
+    // Applies the damage multiplier.
     public void ApplyDamageMultiplier(float multiplier)
     {
         float safeMultiplier = Mathf.Max(0.1f, multiplier);
@@ -28,11 +30,13 @@ public class DamageOrb : MonoBehaviour
         damage = Mathf.Max(1, Mathf.RoundToInt(baseDamage * safeMultiplier));
     }
 
+    // Updates the damage from network.
     public void SetDamageFromNetwork(int networkDamage)
     {
         damage = Mathf.Max(1, networkDamage);
     }
 
+    // Runs the physics-timed update for this behaviour.
     private void FixedUpdate()
     {
         if (fusionDamageOrb != null && !fusionDamageOrb.CanSimulateLocally)
@@ -43,6 +47,7 @@ public class DamageOrb : MonoBehaviour
         rb.MovePosition(transform.position +  transform.forward * speed * Time.deltaTime);
     }
 
+    // Handles the first contact with another collider.
     private void OnTriggerEnter(Collider other)
     {
         if (fusionDamageOrb != null && !fusionDamageOrb.CanSimulateLocally)
@@ -74,6 +79,7 @@ public class DamageOrb : MonoBehaviour
         DestroyOrb();
     }
 
+    // Destroys the orb.
     public void DestroyOrb()
     {
         if (isDestroyed)
@@ -93,6 +99,7 @@ public class DamageOrb : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Plays the hit vfx.
     public void PlayHitVFX(Vector3 hitPosition)
     {
         if (hitVFX != null)

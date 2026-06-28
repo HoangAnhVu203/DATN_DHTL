@@ -29,6 +29,7 @@ public class GameManager : MonoBehaviour
     public bool IsPaused => CurrentState == GameState.Pause;
     public event Action<GameState, GameState> StateChanged;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -45,12 +46,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Runs the first scene-time setup for this object.
     private void Start()
     {
         SubscribeSceneEvents();
         ChangeState(initialState);
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         StopDelayedLose();
@@ -63,6 +66,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Switches to the requested game state.
     public void ChangeState(GameState newState)
     {
         if (hasEnteredState && CurrentState == newState)
@@ -82,6 +86,7 @@ public class GameManager : MonoBehaviour
         StateChanged?.Invoke(previousState, newState);
     }
 
+    // Navigates to home.
     public void GoHome()
     {
         hasFinishedMatch = false;
@@ -90,6 +95,7 @@ public class GameManager : MonoBehaviour
         ChangeState(GameState.Home);
     }
 
+    // Moves the room into a running match.
     public void StartMatch()
     {
         hasFinishedMatch = false;
@@ -98,11 +104,13 @@ public class GameManager : MonoBehaviour
         ChangeState(GameState.StartMatch);
     }
 
+    // Starts the mathc process.
     public void StartMathc()
     {
         StartMatch();
     }
 
+    // Pauses gameplay and opens the pause state.
     public void Pause()
     {
         if (CurrentState != GameState.StartMatch)
@@ -113,6 +121,7 @@ public class GameManager : MonoBehaviour
         ChangeState(GameState.Pause);
     }
 
+    // Resumes gameplay from pause.
     public void Resume()
     {
         if (CurrentState != GameState.Pause)
@@ -123,21 +132,25 @@ public class GameManager : MonoBehaviour
         ChangeState(GameState.StartMatch);
     }
 
+    // Marks the active match as ended with its result.
     public void EndMatch()
     {
         ChangeState(GameState.EndMatch);
     }
 
+    // Handles the win result for the match.
     public void Victory()
     {
         FinishMatch(GameState.Victory);
     }
 
+    // Handles the lose result for the match.
     public void Lose()
     {
         FinishMatch(GameState.Lose);
     }
 
+    // Restarts the current level.
     public void RestartLevel()
     {
         Time.timeScale = 1f;
@@ -145,17 +158,20 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(currentScene.buildIndex);
     }
 
+    // Loads the requested scene.
     public void LoadScene(int buildIndex)
     {
         Time.timeScale = 1f;
         SceneManager.LoadScene(buildIndex);
     }
 
+    // Requests the application to quit.
     public void QuitGame()
     {
         Application.Quit();
     }
 
+    // Enters the requested game state.
     private void EnterState(GameState state)
     {
         switch (state)
@@ -197,6 +213,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Exits the requested game state.
     private void ExitState(GameState state)
     {
         if (state == GameState.Loading && loadingCoroutine != null)
@@ -211,6 +228,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Enters the loading state.
     private void EnterLoading()
     {
         Time.timeScale = 1f;
@@ -224,6 +242,7 @@ public class GameManager : MonoBehaviour
         loadingCoroutine = StartCoroutine(LoadingRoutine());
     }
 
+    // Runs the loading coroutine.
     private IEnumerator LoadingRoutine()
     {
         if (loadingDuration > 0f)
@@ -235,6 +254,7 @@ public class GameManager : MonoBehaviour
         ChangeState(stateAfterLoading);
     }
 
+    // Enters the victory state.
     private void EnterVictory()
     {
         StopVictorySlowMotion(resetTimeScale: false);
@@ -250,6 +270,7 @@ public class GameManager : MonoBehaviour
         victorySlowMotionCoroutine = StartCoroutine(VictorySlowMotionRoutine());
     }
 
+    // Runs the victory slow motion coroutine.
     private IEnumerator VictorySlowMotionRoutine()
     {
         Time.timeScale = Mathf.Clamp(victorySlowMotionScale, 0.01f, 1f);
@@ -262,6 +283,7 @@ public class GameManager : MonoBehaviour
         OpenGameIsFinishedUI();
     }
 
+    // Finishes the match step.
     private void FinishMatch(GameState resultState)
     {
         if (hasFinishedMatch)
@@ -287,6 +309,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Subscribes to scene events events.
     private void SubscribeSceneEvents()
     {
         if (player != null)
@@ -308,6 +331,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Unsubscribes from scene events events.
     private void UnsubscribeSceneEvents()
     {
         if (player != null)
@@ -329,6 +353,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Handles the player died callback.
     private void OnPlayerDied(Character deadCharacter)
     {
         if (NetworkMatchManager.IsOnlineMatchActive())
@@ -344,6 +369,7 @@ public class GameManager : MonoBehaviour
         delayedLoseCoroutine = StartCoroutine(DelayLoseAfterPlayerDeath());
     }
 
+    // Runs the delay lose after player death step.
     private IEnumerator DelayLoseAfterPlayerDeath()
     {
         if (loseDelayAfterPlayerDeath > 0f)
@@ -355,6 +381,7 @@ public class GameManager : MonoBehaviour
         Lose();
     }
 
+    // Stops the delayed lose process.
     private void StopDelayedLose()
     {
         if (delayedLoseCoroutine == null)
@@ -366,6 +393,7 @@ public class GameManager : MonoBehaviour
         delayedLoseCoroutine = null;
     }
 
+    // Stops the victory slow motion process.
     private void StopVictorySlowMotion(bool resetTimeScale)
     {
         if (victorySlowMotionCoroutine != null)
@@ -380,6 +408,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Checks match completion after a spawner is cleared.
     private void OnSpawnerCleared(Spawner clearedSpawner)
     {
         if (NetworkMatchManager.IsOnlineMatchActive())
@@ -403,6 +432,7 @@ public class GameManager : MonoBehaviour
         Victory();
     }
 
+    // Opens the gameplay ui UI.
     private void OpenGameplayUI()
     {
         if (!openGameplayUIOnStartMatch || UIManager.Instance == null)
@@ -413,6 +443,7 @@ public class GameManager : MonoBehaviour
         UIManager.Instance.OpenUI<PanelGamePlay>();
     }
 
+    // Closes the gameplay ui UI.
     private void CloseGameplayUI()
     {
         if (UIManager.Instance == null || !UIManager.Instance.IsUILoaded<PanelGamePlay>())
@@ -423,6 +454,7 @@ public class GameManager : MonoBehaviour
         UIManager.Instance.CloseUIDirectly<PanelGamePlay>();
     }
 
+    // Opens the game is finished ui UI.
     private void OpenGameIsFinishedUI()
     {
         if (UIManager.Instance == null)
@@ -434,6 +466,7 @@ public class GameManager : MonoBehaviour
         UIManager.Instance.OpenUI<PanelGameIsFinished>();
     }
 
+    // Opens the game over ui UI.
     private void OpenGameOverUI()
     {
         if (UIManager.Instance == null)

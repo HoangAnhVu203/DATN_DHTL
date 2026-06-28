@@ -9,6 +9,7 @@ public class UIManager : Singleton<UIManager>
     Dictionary<System.Type, UICanvas> canvasPrefabs = new Dictionary<System.Type, UICanvas>();
     [SerializeField] Transform parent;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         UICanvas[] prefabs = Resources.LoadAll<UICanvas>("UI/");

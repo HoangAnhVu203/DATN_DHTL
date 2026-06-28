@@ -18,6 +18,7 @@ public class NetworkMatchManager : MonoBehaviour
     private bool matchFinished;
     private GameState finishedState;
 
+    // Ensures the is ready.
     public static NetworkMatchManager Ensure()
     {
         if (Instance != null)
@@ -37,6 +38,7 @@ public class NetworkMatchManager : MonoBehaviour
         return Instance;
     }
 
+    // Checks whether an online match is currently active.
     public static bool IsOnlineMatchActive()
     {
         if (OnlineRoomSession.HasMatch)
@@ -56,6 +58,7 @@ public class NetworkMatchManager : MonoBehaviour
         return false;
     }
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -68,6 +71,7 @@ public class NetworkMatchManager : MonoBehaviour
         ResetMatchState();
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         if (Instance == this)
@@ -76,6 +80,7 @@ public class NetworkMatchManager : MonoBehaviour
         }
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         if (!autoStartWhenOnlineMatchExists || matchFinished || !IsOnlineMatchActive())
@@ -92,6 +97,7 @@ public class NetworkMatchManager : MonoBehaviour
         EvaluateMatchState();
     }
 
+    // Resets the match state.
     public void ResetMatchState()
     {
         matchFinished = false;
@@ -100,6 +106,7 @@ public class NetworkMatchManager : MonoBehaviour
         nextEvaluationTime = evaluationAllowedTime;
     }
 
+    // Applies the network result.
     public void ApplyNetworkResult(GameState resultState)
     {
         if (resultState != GameState.Victory && resultState != GameState.Lose)
@@ -119,11 +126,13 @@ public class NetworkMatchManager : MonoBehaviour
         ApplyResultToLocalGameManager(resultState);
     }
 
+    // Forces the victory for debug.
     public void ForceVictoryForDebug()
     {
         FinishMatch(GameState.Victory);
     }
 
+    // Evaluates the match state.
     private void EvaluateMatchState()
     {
         if (AreAllSpawnersCleared())
@@ -148,6 +157,7 @@ public class NetworkMatchManager : MonoBehaviour
         }
     }
 
+    // Finishes the match step.
     private void FinishMatch(GameState resultState)
     {
         if (matchFinished)
@@ -168,6 +178,7 @@ public class NetworkMatchManager : MonoBehaviour
         ApplyResultToLocalGameManager(resultState);
     }
 
+    // Broadcasts the result.
     private bool BroadcastResult(GameState resultState)
     {
         FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
@@ -194,6 +205,7 @@ public class NetworkMatchManager : MonoBehaviour
         return fallback != null && fallback.BroadcastMatchResult(resultState);
     }
 
+    // Applies the result to local game manager.
     private void ApplyResultToLocalGameManager(GameState resultState)
     {
         if (GameManager.Instance == null)
@@ -212,6 +224,7 @@ public class NetworkMatchManager : MonoBehaviour
         }
     }
 
+    // Checks whether every spawner has been cleared.
     private bool AreAllSpawnersCleared()
     {
         Spawner[] spawners = FindObjectsByType<Spawner>(FindObjectsSortMode.None);
@@ -234,6 +247,7 @@ public class NetworkMatchManager : MonoBehaviour
         return validSpawnerCount > 0;
     }
 
+    // Checks whether match time expired is available.
     private bool HasMatchTimeExpired()
     {
         if (!enableMatchTimeLimit || matchTimeLimitSeconds <= 0)
@@ -244,6 +258,7 @@ public class NetworkMatchManager : MonoBehaviour
         return OnlineMatchStats.GetMatchElapsedSeconds() >= matchTimeLimitSeconds;
     }
 
+    // Checks whether every player is unable to continue.
     private bool AreAllPlayersUnableToContinue()
     {
         FusionPlayerAvatar[] avatars = FindObjectsByType<FusionPlayerAvatar>(FindObjectsSortMode.None);
@@ -284,6 +299,7 @@ public class NetworkMatchManager : MonoBehaviour
         return unablePlayerCount >= activePlayerCount;
     }
 
+    // Returns the expected player count.
     private int GetExpectedPlayerCount()
     {
         if (OnlineRoomSession.ExpectedMatchPlayerCount > 0)

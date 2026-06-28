@@ -75,6 +75,7 @@ public abstract class Character : MonoBehaviour
     protected virtual bool CanBecomeInvincible => false;
     public bool UseExternalMovementTick { get; set; }
 
+    // Sets up this component before gameplay starts.
     protected virtual void Awake()
     {
         characterController = GetComponent<CharacterController>();
@@ -97,6 +98,7 @@ public abstract class Character : MonoBehaviour
         baseMoveSpeed = moveSpeed;
     }
 
+    // Runs the first scene-time setup for this object.
     protected virtual void Start()
     {
         EnterState(CurrentState);
@@ -107,6 +109,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         if (UseExternalMovementTick || rb != null)
@@ -117,6 +120,7 @@ public abstract class Character : MonoBehaviour
         MoveCharacter(Time.deltaTime);
     }
 
+    // Runs the physics-timed update for this behaviour.
     private void FixedUpdate()
     {
         if (UseExternalMovementTick || rb == null)
@@ -127,6 +131,7 @@ public abstract class Character : MonoBehaviour
         MoveCharacter(Time.fixedDeltaTime);
     }
 
+    // Runs one character movement tick.
     public void TickMovement(float deltaTime)
     {
         if (deltaTime <= 0f)
@@ -137,6 +142,7 @@ public abstract class Character : MonoBehaviour
         MoveCharacter(deltaTime);
     }
 
+    // Moves the character.
     private void MoveCharacter(float deltaTime)
     {
         if (CurrentState == CharacterState.Dead)
@@ -206,6 +212,7 @@ public abstract class Character : MonoBehaviour
         AfterMove();
     }
 
+    // Moves with CharacterController while preserving gravity and impact.
     private void MoveWithCharacterController(Vector3 direction, float speed, bool canMove, bool hasMoveInput, float deltaTime)
     {
         IsGrounded = characterController.isGrounded;
@@ -232,6 +239,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Moves the character.
     private void Move(Vector3 direction, float deltaTime)
     {
         Vector3 movement = direction * moveSpeed * deltaTime;
@@ -245,6 +253,7 @@ public abstract class Character : MonoBehaviour
         transform.position += movement;
     }
 
+    // Rotates toward the target direction.
     private void Rotate(Vector3 direction, float deltaTime)
     {
         Quaternion targetRotation = Quaternion.LookRotation(direction);
@@ -258,6 +267,7 @@ public abstract class Character : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * deltaTime);
     }
 
+    // Updates the animator float.
     private void SetAnimatorFloat(string parameterName, float value, float dampTime, float deltaTime)
     {
         if (animator != null)
@@ -272,6 +282,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Updates the animator bool.
     private void SetAnimatorBool(string parameterName, bool value)
     {
         if (animator != null)
@@ -280,6 +291,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Updates the animator trigger.
     protected void SetAnimatorTrigger(string parameterName)
     {
         if (animator != null)
@@ -288,11 +300,13 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Checks whether animator is available.
     protected bool HasAnimator()
     {
         return animator != null;
     }
 
+    // Switches the character to a new state.
     public void SwitchToState(CharacterState newState, bool forceRestart = false)
     {
         if (isSpawnDissolving
@@ -314,6 +328,7 @@ public abstract class Character : MonoBehaviour
         EnterState(CurrentState);
     }
 
+    // Updates the movement state.
     private void UpdateMovementState(float speed)
     {
         if (!CanAutoSwitchMovementState())
@@ -324,11 +339,13 @@ public abstract class Character : MonoBehaviour
         SwitchToState(speed > MoveInputThreshold ? CharacterState.Run : CharacterState.Idle);
     }
 
+    // Checks whether the character can auto-switch movement state.
     private bool CanAutoSwitchMovementState()
     {
         return CurrentState == CharacterState.Idle || CurrentState == CharacterState.Run;
     }
 
+    // Checks whether the current state allows movement.
     private bool CanMoveInCurrentState()
     {
         return !isSpawnDissolving
@@ -340,6 +357,7 @@ public abstract class Character : MonoBehaviour
 
     protected abstract Vector3 GetMoveDirection();
 
+    // Enters the requested character state.
     private void EnterState(CharacterState state)
     {
         switch (state)
@@ -370,6 +388,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Updates the state.
     private void UpdateState(CharacterState state, float deltaTime)
     {
         switch (state)
@@ -400,6 +419,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Exits the requested character state.
     private void ExitState(CharacterState state)
     {
         switch (state)
@@ -430,18 +450,31 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Sets up the idle state.
     protected virtual void OnEnterIdle() { }
+    // Updates the idle state while it is active.
     protected virtual void OnUpdateIdle(float deltaTime) { }
+    // Cleans up the idle state.
     protected virtual void OnExitIdle() { }
+    // Sets up the run state.
     protected virtual void OnEnterRun() { }
+    // Updates the run state while it is active.
     protected virtual void OnUpdateRun(float deltaTime) { }
+    // Cleans up the run state.
     protected virtual void OnExitRun() { }
+    // Sets up the attack state.
     protected virtual void OnEnterAttack() { }
+    // Updates the attack state while it is active.
     protected virtual void OnUpdateAttack(float deltaTime) { }
+    // Cleans up the attack state.
     protected virtual void OnExitAttack() { }
+    // Sets up the slide state.
     protected virtual void OnEnterSlide() { }
+    // Updates the slide state while it is active.
     protected virtual void OnUpdateSlide(float deltaTime) { }
+    // Cleans up the slide state.
     protected virtual void OnExitSlide() { }
+    // Sets up the hurt state.
     protected virtual void OnEnterHurt()
     {
         hurtTimer = Mathf.Max(hurtDuration, 0f);
@@ -460,6 +493,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Updates the hurt state while it is active.
     protected virtual void OnUpdateHurt(float deltaTime)
     {
         if (HasAnimator())
@@ -479,11 +513,13 @@ public abstract class Character : MonoBehaviour
             FinishHurt();
         }
     }
+    // Cleans up the hurt state.
     protected virtual void OnExitHurt()
     {
         impactOnCharacter = Vector3.zero;
     }
 
+    // Sets up the dead state.
     protected virtual void OnEnterDead()
     {
         deathDropPosition = transform.position;
@@ -513,9 +549,12 @@ public abstract class Character : MonoBehaviour
             rb.angularVelocity = Vector3.zero;
         }
     }
+    // Updates the dead state while it is active.
     protected virtual void OnUpdateDead(float deltaTime) { }
+    // Cleans up the dead state.
     protected virtual void OnExitDead() { }
 
+    // Notifies listeners that died occurred.
     private void NotifyDied()
     {
         if (hasNotifiedDeath)
@@ -527,14 +566,17 @@ public abstract class Character : MonoBehaviour
         Died?.Invoke(this);
     }
 
+    // Updates the move effects.
     protected virtual void UpdateMoveEffects(bool isMoving)
     {
     }
 
+    // Runs post-move hooks after movement finishes.
     protected virtual void AfterMove()
     {
     }
 
+    // Moves the by.
     protected void MoveBy(Vector3 movement)
     {
         if (characterController != null)
@@ -552,6 +594,7 @@ public abstract class Character : MonoBehaviour
         transform.position += movement;
     }
 
+    // Rotates toward the towards.
     protected void RotateTowards(Vector3 direction, float deltaTime)
     {
         direction.y = 0f;
@@ -564,6 +607,7 @@ public abstract class Character : MonoBehaviour
         Rotate(direction.normalized, deltaTime);
     }
 
+    // Applies the damage.
     public void ApplyDamage(int damage, Vector3 attackPos = new Vector3())
     {
         if (CanBecomeInvincible && isInvincible)
@@ -596,6 +640,7 @@ public abstract class Character : MonoBehaviour
         AddImpact(attackPos, HurtImpactForce);
     }
 
+    // Starts the short invincibility window after taking damage.
     private void StartInvincible()
     {
         if (!CanBecomeInvincible || invincibleDuration <= 0f)
@@ -613,6 +658,7 @@ public abstract class Character : MonoBehaviour
         invincibleCoroutine = StartCoroutine(DelayCancelInvincible());
     }
 
+    // Runs the delay cancel invincible step.
     private IEnumerator DelayCancelInvincible()
     {
         yield return new WaitForSeconds(invincibleDuration);
@@ -620,6 +666,7 @@ public abstract class Character : MonoBehaviour
         invincibleCoroutine = null;
     }
 
+    // Checks whether temporary invincibility has expired.
     private void CancelInvincible()
     {
         if (invincibleCoroutine != null)
@@ -631,6 +678,7 @@ public abstract class Character : MonoBehaviour
         isInvincible = false;
     }
 
+    // Enables the damage caster.
     public void EnableDamageCaster()
     {
         if (damageCaster != null)
@@ -639,6 +687,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Disables the damage caster.
     public void DisableDamageCaster()
     {
         if (damageCaster != null)
@@ -647,6 +696,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Applies the runtime move speed multiplier.
     public virtual void ApplyRuntimeMoveSpeedMultiplier(float multiplier)
     {
         float safeMultiplier = Mathf.Max(0.1f, multiplier);
@@ -658,11 +708,13 @@ public abstract class Character : MonoBehaviour
         moveSpeed = baseMoveSpeed * safeMultiplier;
     }
 
+    // Skips the next death dissolve effect.
     public void SuppressNextDeathDissolve()
     {
         suppressNextDeathDissolve = true;
     }
 
+    // Revives the character with the supplied health.
     public void Revive(int reviveHealth)
     {
         StopMaterialDissolve();
@@ -689,6 +741,7 @@ public abstract class Character : MonoBehaviour
         SwitchToState(CharacterState.Idle, true);
     }
 
+    // Starts the material blink feedback after a hit.
     private void PlayMaterialsBlink()
     {
         if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
@@ -704,6 +757,7 @@ public abstract class Character : MonoBehaviour
         blinkCoroutine = StartCoroutine(MaterialsBlink());
     }
 
+    // Animates the hit blink on character materials.
     private IEnumerator MaterialsBlink()
     {
         SetMaterialsBlink(BlinkAmount);
@@ -714,6 +768,7 @@ public abstract class Character : MonoBehaviour
         blinkCoroutine = null;
     }
 
+    // Updates the materials blink.
     private void SetMaterialsBlink(float value)
     {
         foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
@@ -729,6 +784,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Starts the material dissolve process.
     private void StartMaterialDissolve()
     {
         if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
@@ -752,6 +808,7 @@ public abstract class Character : MonoBehaviour
         dissolveCoroutine = StartCoroutine(MaterialDissolve());
     }
 
+    // Stops the material dissolve process.
     private void StopMaterialDissolve()
     {
         if (blinkCoroutine != null)
@@ -772,6 +829,7 @@ public abstract class Character : MonoBehaviour
         SetMaterialsFloat(DissolveHeightPropertyId, dissolveStartHeight);
     }
 
+    // Plays the spawn dissolve.
     public void PlaySpawnDissolve()
     {
         if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
@@ -799,6 +857,7 @@ public abstract class Character : MonoBehaviour
         dissolveCoroutine = StartCoroutine(MaterialSpawnDissolve());
     }
 
+    // Animates the spawn dissolve on character materials.
     private IEnumerator MaterialSpawnDissolve()
     {
         isSpawnDissolving = true;
@@ -828,6 +887,7 @@ public abstract class Character : MonoBehaviour
         dissolveCoroutine = null;
     }
 
+    // Animates the death dissolve on character materials.
     private IEnumerator MaterialDissolve()
     {
         SetMaterialsFloat(EnableDissolvePropertyId, 1f);
@@ -855,6 +915,7 @@ public abstract class Character : MonoBehaviour
         DropItem();
     }
 
+    // Updates the materials float.
     private void SetMaterialsFloat(int propertyId, float value)
     {
         foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderers)
@@ -870,6 +931,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Drops the item.
     public void DropItem()
     {
         if (itemDrop == null)
@@ -905,6 +967,7 @@ public abstract class Character : MonoBehaviour
         Instantiate(itemDrop, dropPosition, Quaternion.identity);
     }
 
+    // Applies the pickup value.
     public void ApplyPickupValue(PickUpType pickupType, int value)
     {
         switch (pickupType)
@@ -919,6 +982,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Checks whether the hurt animation has finished.
     private bool IsHurtAnimationFinished(float deltaTime)
     {
         AnimatorStateInfo currentStateInfo = animator.GetCurrentAnimatorStateInfo(0);
@@ -941,6 +1005,7 @@ public abstract class Character : MonoBehaviour
         return hurtTimer <= 0f;
     }
 
+    // Finishes the hurt step.
     private void FinishHurt()
     {
         if (CurrentState == CharacterState.Hurt)
@@ -949,6 +1014,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Adds the impact.
     private void AddImpact(Vector3 attackerPos, float force)
     {
         if (force <= 0f)
@@ -971,6 +1037,7 @@ public abstract class Character : MonoBehaviour
         impactOnCharacter = impactDir * force;
     }
 
+    // Applies the impact.
     private void ApplyImpact(float deltaTime)
     {
         if (impactOnCharacter.sqrMagnitude <= 0.001f)
@@ -1001,6 +1068,7 @@ public abstract class Character : MonoBehaviour
         );
     }
 
+    // Picks up the item.
     public void PickUpItem(PickUp item)
     {
         switch (item.type)
@@ -1015,6 +1083,7 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Adds the health.
     private void AddHealth(int health)
     {
         Health.AddHealth(health);
@@ -1026,12 +1095,14 @@ public abstract class Character : MonoBehaviour
         }
     }
 
+    // Adds the coin.
     private void AddCoin(int coin)
     {
         Coin += coin;
         CoinChanged?.Invoke(Coin);
     }
 
+    // Turns the character toward the current target.
     public void RotateToTarget()
     {
         if (CurrentState == CharacterState.Dead || isSpawnDissolving)

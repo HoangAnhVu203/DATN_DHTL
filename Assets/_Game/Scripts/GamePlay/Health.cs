@@ -10,6 +10,7 @@ public class Health : MonoBehaviour
     public event Action<int, int> HealthChanged;
     private int baseMaxHealth;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         baseMaxHealth = Mathf.Max(1, maxHealth);
@@ -17,6 +18,7 @@ public class Health : MonoBehaviour
         NotifyHealthChanged();
     }
 
+    // Updates the health from network.
     public void SetHealthFromNetwork(int current, int max)
     {
         int previousMax = maxHealth;
@@ -32,6 +34,7 @@ public class Health : MonoBehaviour
         NotifyHealthChanged();
     }
 
+    // Applies the max health multiplier.
     public void ApplyMaxHealthMultiplier(float multiplier, bool refillHealth)
     {
         float safeMultiplier = Mathf.Max(0.1f, multiplier);
@@ -48,6 +51,7 @@ public class Health : MonoBehaviour
         SetHealthFromNetwork(scaledCurrentHealth, scaledMaxHealth);
     }
 
+    // Applies the damage.
     public void ApplyDamage(int damage)
     {
         if (IsDead || damage <= 0)
@@ -59,6 +63,7 @@ public class Health : MonoBehaviour
         NotifyHealthChanged();
     }
 
+    // Adds the health.
     public void AddHealth(int health)
     {
         currentHealth = Mathf.Clamp(currentHealth + health, 0, maxHealth);
@@ -66,6 +71,7 @@ public class Health : MonoBehaviour
         NotifyHealthChanged();
     }
 
+    // Notifies listeners that health changed occurred.
     private void NotifyHealthChanged()
     {
         HealthChanged?.Invoke(currentHealth, maxHealth);

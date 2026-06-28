@@ -11,16 +11,19 @@ public class SpawnPoint : MonoBehaviour
     [SerializeField] private Color gizmoColor = new Color(1f, 0.55f, 0f, 0.35f);
     [SerializeField] private Color selectedGizmoColor = new Color(0f, 1f, 0.35f, 0.45f);
 
+    // Draws editor helper visuals for this object.
     private void OnDrawGizmos()
     {
         DrawSpawnGizmo(gizmoColor, false);
     }
 
+    // Draws extra editor helpers while this object is selected.
     private void OnDrawGizmosSelected()
     {
         DrawSpawnGizmo(selectedGizmoColor, true);
     }
 
+    // Draws the spawn marker in the editor scene view.
     private void DrawSpawnGizmo(Color color, bool selected)
     {
         Vector3 size = new Vector3(

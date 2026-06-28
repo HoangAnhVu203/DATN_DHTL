@@ -8,6 +8,7 @@ public class OnlineMatchBootstrap : MonoBehaviour
     [SerializeField] private Transform[] spawnPoints;
     [SerializeField] private bool spawnOfflineSinglePlayer = true;
 
+    // Runs the first scene-time setup for this object.
     private void Start()
     {
         ResolveReferences();
@@ -46,6 +47,7 @@ public class OnlineMatchBootstrap : MonoBehaviour
         }
     }
 
+    // Spawns the players.
     private void SpawnPlayers()
     {
         if (playerTemplate == null)
@@ -94,6 +96,7 @@ public class OnlineMatchBootstrap : MonoBehaviour
         }
     }
 
+    // Places the local player at a match spawn point.
     private void PlacePlayer(Player player, Transform spawnPoint, bool isLocalPlayer, string displayName)
     {
         if (player == null || spawnPoint == null)
@@ -113,6 +116,7 @@ public class OnlineMatchBootstrap : MonoBehaviour
         }
     }
 
+    // Returns the spawn index.
     private int GetSpawnIndex(string spawnName)
     {
         int underscoreIndex = spawnName.LastIndexOf('_');

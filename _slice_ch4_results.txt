@@ -1,0 +1,48 @@
+0688	[Content]	Sau quá trình triển khai, hệ thống đã hoàn thành các chức năng chính của một game 3D co-op sinh tồn nhiều người chơi, bao gồm đăng nhập, quản lý người chơi, tạo và tham gia phòng, bắt đầu trận đấu, đồng bộ quá trình chơi thời gian thực, xử lý enemy AI, kết thúc trận, lưu kết quả và hiển thị lịch sử trận đấu.
+0689	[Heading 3]	Đăng ký, đăng nhập và quản lý thông tin người chơi
+0690	[Bullet]	Hệ thống đã triển khai chức năng đăng ký và đăng nhập người chơi thông qua Supabase Auth. Người chơi có thể sử dụng email và mật khẩu để đăng nhập vào hệ thống. Sau khi đăng nhập thành công, Unity Client lưu thông tin phiên đăng nhập gồm access token, user id, email và các thông tin hồ sơ cần thiết.
+0691	[Bullet]	Thông tin người chơi như username, display name, avatar và coin được tải từ cơ sở dữ liệu và hiển thị trên giao diện chính. Người chơi có thể cập nhật một số thông tin cá nhân như tên hiển thị và ảnh đại diện. Dữ liệu người chơi được lưu ở phía máy chủ nên không bị mất khi thoát game hoặc đăng nhập lại.
+0693	[Caption]	Hình 4.1 Giao diện Đăng ký
+0695	[Caption]	Hình 4.2 Giao diện Đăng nhập
+0697	[Caption]	Hình 4.3 Giao diện Quản lý thông tin người chơi
+0700	[Caption]	Hình 4.4 Giao diện Quản lý tham gia trận
+0701	[Heading 3]	Tạo phòng và tham gia phòng chơi
+0702	[Bullet]	Hệ thống đã triển khai chức năng tạo phòng và tham gia phòng chơi. Khi người chơi tạo phòng, phía máy chủ sinh mã phòng và lưu thông tin phòng vào cơ sở dữ liệu. Người chơi khác có thể nhập mã phòng để tham gia vào phòng đã có.
+0703	[Bullet]	Trong phòng chơi, hệ thống hiển thị danh sách người chơi, tên hiển thị, avatar, vai trò chủ phòng/người chơi và trạng thái sẵn sàng. Các thay đổi trong phòng được cập nhật để các thành viên nhìn thấy trạng thái mới nhất trước khi bắt đầu trận.
+0705	[Caption]	Hình 4.5 Giao diện Trang chủ
+0707	[Caption]	Hình 4.6 Giao diện phòng chơi
+0708	[Heading 3]	Sẵn sàng và bắt đầu trận đấu
+0709	[Bullet]	Người chơi trong phòng có thể chuyển trạng thái sẵn sàng trước khi bắt đầu trận. Chủ phòng có quyền bắt đầu trận khi các điều kiện hợp lệ được đáp ứng. Khi bắt đầu trận, phía máy chủ tạo dữ liệu trận đấu, cập nhật trạng thái phòng và Unity Client chuyển sang scene Gameplay.
+0710	[Bullet]	Chức năng này giúp đảm bảo chỉ những người chơi trong cùng một phòng được đưa vào cùng một trận đấu. Mỗi trận đấu được gắn với match_id riêng để phục vụ quá trình tham gia phiên đa người chơi và lưu kết quả sau trận.
+0712	[Caption]	Hình 4.7 Giao diện Sẵn sàng
+0714	[Caption]	Hình 4.8 Giao diện bắt đầu trận
+0715	[Heading 3]	Vào trận đa người chơi và đồng bộ người chơi
+0716	[Bullet]	Sau khi trận đấu được tạo, Unity Client sử dụng match_id để tham gia phiên Photon Fusion tương ứng. Mỗi người chơi được sinh ra thành một network player trong cùng map. Hệ thống đã đồng bộ được vị trí, hướng xoay, hành động, máu, tên hiển thị và trạng thái của người chơi giữa các client.
+0717	[Bullet]	Nhờ cơ chế phiên riêng theo match_id, các trận đấu khác nhau được tách biệt với nhau. Người chơi trong trận này chỉ nhận dữ liệu từ những người chơi cùng phiên mạng, không bị ảnh hưởng bởi các phòng hoặc trận khác đang hoạt động cùng thời điểm.
+0719	[Caption]	Hình 4.9 Giao diện Quá trình chơi
+0720	[Heading 3]	Quá trình chơi của nhân vật
+0721	[Bullet]	Hệ thống đã triển khai quá trình chơi điều khiển nhân vật trong môi trường 3D. Người chơi có thể di chuyển, tấn công kẻ địch, sử dụng kỹ năng slide, nhận sát thương và theo dõi máu thông qua giao diện HUD.
+0722	[Bullet]	Nhân vật được quản lý theo các trạng thái như Idle, Run, Attack, Slide, Hurt và Dead. Việc tổ chức theo trạng thái giúp quá trình điều khiển hành động và xử lý quá trình chơi rõ ràng hơn.
+0724	[Caption]	Hình 4.10 Giao diện Người chơi di chuyển
+0726	[Caption]	Hình 4.11  Giao diện Người chơi tấn công
+0728	[Caption]	Hình 4.12 Giao diện Người chơi slide
+0729	[Heading 3]	AI kẻ địch, đợt kẻ địch và mở cổng
+0730	[Bullet]	Game đã triển khai hệ thống enemy AI sử dụng Unity NavMesh. Kẻ địch có thể tìm đường trong map, xác định mục tiêu người chơi gần nhất, di chuyển tới mục tiêu và tấn công người chơi. Hệ thống hỗ trợ nhiều loại kẻ địch như kẻ địch cận chiến và kẻ địch tấn công tầm xa.
+0731	[Bullet]	Kẻ địch được sinh ra theo từng khu vực hoặc đợt kẻ địch. Khi toàn bộ kẻ địch trong một khu vực bị tiêu diệt, hệ thống mở gate để người chơi tiếp tục di chuyển sang khu vực tiếp theo. Ngoài ra, game có cơ chế tăng độ khó theo đợt kẻ địch, thời gian hoặc số lượng người chơi để tăng tính thử thách.
+0733	[Caption]	Hình 4.13  Kẻ địch sinh ra và tấn công Người chơi
+0734	[Heading 3]	Chiến đấu, sát thương và hồi sinh đồng đội
+0735	[Bullet]	Hệ thống đã triển khai cơ chế chiến đấu giữa người chơi và kẻ địch. Khi người chơi tấn công, sát thương được áp dụng lên kẻ địch và trạng thái máu/death của kẻ địch được đồng bộ tới các client khác. Khi kẻ địch tấn công, người chơi bị giảm máu và có thể rơi vào trạng thái bị hạ.
+0736	[Bullet]	Trong chế độ co-op, người chơi có thể hồi sinh đồng đội nếu đứng trong phạm vi cho phép và giữ nút hồi sinh đủ thời gian. Sau khi hồi sinh thành công, trạng thái của người chơi được cập nhật và đồng bộ trong trận. Chức năng này giúp tăng tính phối hợp giữa các thành viên trong đội.
+0739	[Caption]	Hình 4.14  Người chơi tấn công Kẻ địch
+0741	[Caption]	Hình 4.15  Hồi sinh đồng đội
+0742	[Heading 3]	Vật phẩm và tài nguyên trong trận
+0743	[Bullet]	Trong trận đấu, người chơi có thể nhặt các vật phẩm hỗ trợ như coin, health orb. Các vật phẩm này giúp tăng tính tương tác và hỗ trợ người chơi trong quá trình sinh tồn.
+0744	[Bullet]	Khi một vật phẩm được nhặt, trạng thái vật phẩm được đồng bộ để các client khác không thể nhặt lại cùng một vật phẩm. Coin của người chơi được cập nhật trên giao diện và có thể được lưu vào dữ liệu người chơi sau trận.
+0746	[Caption]	Hình 4.16  Health Orb và Coin Orb
+0747	[Heading 3]	Kết thúc trận, bảng xếp hạng và lịch sử trận đấu
+0748	[Bullet]	Hệ thống đã triển khai cơ chế kết thúc trận dựa trên điều kiện thắng hoặc thua. Khi người chơi hoàn thành mục tiêu, trận đấu chuyển sang trạng thái Victory. Nếu toàn bộ người chơi không thể tiếp tục, trận đấu chuyển sang trạng thái Lose.
+0749	[Bullet]	Sau khi trận kết thúc, hệ thống tổng hợp thống kê của từng người chơi như số kẻ địch tiêu diệt, lượng sát thương gây ra, số lần bị hạ, số lần hồi sinh và thời gian sống sót. Dữ liệu này được gửi lên phía máy chủ để lưu vào lịch sử trận đấu.
+0750	[Bullet]	Giao diện kết quả hiển thị bảng xếp hạng của người chơi trong trận. Người chơi cũng có thể xem lại lịch sử các trận đã tham gia thông qua màn hình match history.
+0752	[Caption]	Hình 4.17  Giao diện Thua
+0754	[Caption]	Hình 4.18 Giao diện thắng trận
+0756	[Caption]	Hình 4.19  Giao diện Lịch sử trận đấu

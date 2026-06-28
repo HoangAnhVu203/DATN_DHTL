@@ -31,6 +31,7 @@ public class PanelInformation : UICanvas
     private bool isSaving;
     private bool referencesResolved;
 
+    // Refreshes the information player avatar.
     public static void RefreshInformationPlayerAvatar()
     {
         GameObject infoButtonObject = GameObject.Find(InformationButtonObjectName);
@@ -55,6 +56,7 @@ public class PanelInformation : UICanvas
         informationButtonImage.enabled = true;
     }
 
+    // Opens the from scene UI.
     public static PanelInformation OpenFromScene()
     {
         UIManager uiManager = FindFirstObjectByType<UIManager>();
@@ -78,6 +80,7 @@ public class PanelInformation : UICanvas
         return panel;
     }
 
+    // Shows this panel and refreshes its visible state.
     public override void Open()
     {
         base.Open();
@@ -86,6 +89,7 @@ public class PanelInformation : UICanvas
         StartCoroutine(LoadProfileRoutine());
     }
 
+    // Removes listeners and runtime resources before destruction.
     private void OnDestroy()
     {
         if (avatarButton != null)
@@ -256,6 +260,7 @@ public class PanelInformation : UICanvas
         }
     }
 
+    // Loads the session into ui.
     private void LoadSessionIntoUI()
     {
         if (usernameInput != null)
@@ -275,6 +280,7 @@ public class PanelInformation : UICanvas
         SetStatus(string.Empty);
     }
 
+    // Runs the load profile coroutine.
     private IEnumerator LoadProfileRoutine()
     {
         if (!CanUseSupabase())
@@ -310,6 +316,7 @@ public class PanelInformation : UICanvas
         LoadSessionIntoUI();
     }
 
+    // Opens the select avatar panel UI.
     private void OpenSelectAvatarPanel()
     {
         if (selectAvatarPanel != null)
@@ -318,6 +325,7 @@ public class PanelInformation : UICanvas
         }
     }
 
+    // Applies the chosen avatar to the profile form.
     private void SelectAvatar(string avatarKey, Sprite avatarSprite)
     {
         selectedAvatarKey = avatarKey;
@@ -334,16 +342,19 @@ public class PanelInformation : UICanvas
         }
     }
 
+    // Enables the username edit.
     private void EnableUsernameEdit()
     {
         EnableInput(usernameInput);
     }
 
+    // Enables the display name edit.
     private void EnableDisplayNameEdit()
     {
         EnableInput(displayNameInput);
     }
 
+    // Enables the input.
     private void EnableInput(TMP_InputField input)
     {
         if (input == null)
@@ -356,6 +367,7 @@ public class PanelInformation : UICanvas
         input.ActivateInputField();
     }
 
+    // Handles the close click.
     private void OnCloseClicked()
     {
         if (isSaving)
@@ -366,6 +378,7 @@ public class PanelInformation : UICanvas
         StartCoroutine(SaveAndCloseRoutine());
     }
 
+    // Opens the match history panel UI.
     private void OpenMatchHistoryPanel()
     {
         if (!SupabaseSession.IsLoggedIn)
@@ -377,6 +390,7 @@ public class PanelInformation : UICanvas
         PanelMatchHistory.OpenFromScene();
     }
 
+    // Runs the save and close coroutine.
     private IEnumerator SaveAndCloseRoutine()
     {
         if (!CanUseSupabase())
@@ -452,11 +466,13 @@ public class PanelInformation : UICanvas
         CloseDirectly();
     }
 
+    // Checks whether the current Supabase session can make requests.
     private bool CanUseSupabase()
     {
         return config != null && SupabaseSession.IsLoggedIn && !string.IsNullOrWhiteSpace(SupabaseSession.UserId);
     }
 
+    // Adds Supabase auth headers to the outgoing request.
     private void ApplyAuthHeaders(UnityWebRequest request)
     {
         request.SetRequestHeader("apikey", config.AnonKey);
@@ -464,6 +480,7 @@ public class PanelInformation : UICanvas
         request.SetRequestHeader("Accept", "application/json");
     }
 
+    // Applies the avatar.
     private void ApplyAvatar(string avatarKey)
     {
         Sprite sprite = GetSpriteForAvatar(avatarKey);
@@ -474,6 +491,7 @@ public class PanelInformation : UICanvas
         }
     }
 
+    // Returns the sprite for avatar.
     private Sprite GetSpriteForAvatar(string avatarKey)
     {
         if (string.IsNullOrWhiteSpace(avatarKey) || !avatarKey.StartsWith(LocalAvatarPrefix, StringComparison.OrdinalIgnoreCase))
@@ -502,6 +520,7 @@ public class PanelInformation : UICanvas
         return infoButtonObject != null ? infoButtonObject.GetComponent<Image>() : null;
     }
 
+    // Returns the sprite for avatar from prefab.
     private static Sprite GetSpriteForAvatarFromPrefab(string avatarKey)
     {
         List<Sprite> sprites = LoadAvatarSpritesFromInformationPrefab();
@@ -524,6 +543,7 @@ public class PanelInformation : UICanvas
         return sprites[index];
     }
 
+    // Loads the avatar sprites from information prefab.
     private static List<Sprite> LoadAvatarSpritesFromInformationPrefab()
     {
         List<Sprite> sprites = new List<Sprite>();
@@ -565,6 +585,7 @@ public class PanelInformation : UICanvas
         return null;
     }
 
+    // Writes a short status message to the UI.
     private void SetStatus(string message)
     {
         if (statusText != null)
@@ -612,6 +633,7 @@ public class PanelInformation : UICanvas
         return null;
     }
 
+    // Turns request errors into a readable message.
     private string BuildErrorMessage(long statusCode, string requestError, string responseText)
     {
         if (!string.IsNullOrWhiteSpace(responseText))

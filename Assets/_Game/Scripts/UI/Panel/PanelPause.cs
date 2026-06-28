@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class PanelPause : UICanvas
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    // Runs the first scene-time setup for this object.
     void Start()
     {
         
     }
 
-    // Update is called once per frame
+    // Runs the per-frame work for this behaviour.
     void Update()
     {
         

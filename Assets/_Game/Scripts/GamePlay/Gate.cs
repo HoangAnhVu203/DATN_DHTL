@@ -11,6 +11,7 @@ public class Gate : MonoBehaviour
     private Coroutine openCoroutine;
     private bool isOpen;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         gateCollider = GetComponent<Collider>();
@@ -23,6 +24,7 @@ public class Gate : MonoBehaviour
         gateVisualColliders = gateVisual.GetComponentsInChildren<Collider>();
     }
 
+    // Opens the gate tied to this area.
     public void OpenGate()
     {
         if (isOpen)
@@ -40,6 +42,7 @@ public class Gate : MonoBehaviour
         openCoroutine = StartCoroutine(OpenGateAnimation());
     }
 
+    // Opens the gate tied to this area.
     private IEnumerator OpenGateAnimation()
     {
         float currentOpenDuration = 0f;

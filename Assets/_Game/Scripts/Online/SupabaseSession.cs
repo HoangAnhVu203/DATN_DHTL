@@ -14,12 +14,14 @@ public static class SupabaseSession
 
     public static bool IsLoggedIn => !string.IsNullOrEmpty(AccessToken);
 
+    // Updates the coin.
     public static void SetCoin(int coin)
     {
         Coin = System.Math.Max(0, coin);
         CoinChanged?.Invoke(Coin);
     }
 
+    // Adds the coin.
     public static void AddCoin(int coin)
     {
         if (coin <= 0)
@@ -30,6 +32,7 @@ public static class SupabaseSession
         SetCoin(Coin + coin);
     }
 
+    // Updates the config.
     public static void SetConfig(SupabaseConfig config)
     {
         if (config != null)
@@ -38,6 +41,7 @@ public static class SupabaseSession
         }
     }
 
+    // Resets this view back to an empty state.
     public static void Clear()
     {
         AccessToken = null;

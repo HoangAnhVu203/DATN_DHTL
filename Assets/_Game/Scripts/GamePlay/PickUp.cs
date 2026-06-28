@@ -11,6 +11,7 @@ public class PickUp : NetworkBehaviour
     private bool collected;
     private int NetworkId => networkId != 0 ? networkId : ComputeStableNetworkId();
 
+    // Handles the first contact with another collider.
     private void OnTriggerEnter(Collider other)
     {
         if (collected)
@@ -42,6 +43,7 @@ public class PickUp : NetworkBehaviour
         Destroy(gameObject);
     }
 
+    // Collects the network player.
     private void CollectNetworkPlayer(FusionPlayerAvatar networkPlayer)
     {
         if (Object != null && Object.IsValid && Runner != null && Runner.IsRunning)
@@ -58,6 +60,7 @@ public class PickUp : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the request collect RPC.
     private void RPC_RequestCollect(PlayerRef collector)
     {
         if (collected)
@@ -85,11 +88,13 @@ public class PickUp : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // Runs the play collected vfx RPC.
     private void RPC_PlayCollectedVFX(Vector3 position)
     {
         PlayCollectedVFX(position);
     }
 
+    // Plays the collected vfx.
     private void PlayCollectedVFX(Vector3 position)
     {
         if (collectedVFX != null)
@@ -98,6 +103,7 @@ public class PickUp : NetworkBehaviour
         }
     }
 
+    // Collects the local pickup for network id.
     public static void CollectLocalPickupForNetworkId(int pickupNetworkId, Vector3 collectPosition)
     {
         PickUp[] pickups = FindObjectsByType<PickUp>(FindObjectsSortMode.None);
@@ -114,6 +120,7 @@ public class PickUp : NetworkBehaviour
         }
     }
 
+    // Computes the stable network id.
     private int ComputeStableNetworkId()
     {
         unchecked
@@ -133,6 +140,7 @@ public class PickUp : NetworkBehaviour
         }
     }
 
+    // Returns the hierarchy path.
     private string GetHierarchyPath(Transform current)
     {
         if (current == null)

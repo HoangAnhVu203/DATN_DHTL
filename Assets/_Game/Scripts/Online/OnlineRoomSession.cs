@@ -19,6 +19,7 @@ public static class OnlineRoomSession
     public static bool IsHost => IsInRoom && HostId == SupabaseSession.UserId;
     public static bool HasMatch => !string.IsNullOrEmpty(MatchId);
 
+    // Stores the room service and room data for this panel.
     public static void SetRoom(RoomService.RoomData room)
     {
         RoomId = room.room_id;
@@ -28,6 +29,7 @@ public static class OnlineRoomSession
         MaxPlayers = room.max_players;
     }
 
+    // Updates the match.
     public static void SetMatch(RoomService.MatchData match)
     {
         if (match == null)
@@ -41,16 +43,19 @@ public static class OnlineRoomSession
         MatchStartedAt = match.started_at;
     }
 
+    // Stores how many players this match should wait for.
     public static void CacheExpectedMatchPlayerCount()
     {
         ExpectedMatchPlayerCount = Players != null && Players.Count > 0 ? Players.Count : 0;
     }
 
+    // Marks the current match as already completed locally.
     public static void MarkCurrentMatchCompleted()
     {
         LastCompletedMatchId = MatchId;
     }
 
+    // Clears the match.
     public static void ClearMatch()
     {
         MatchId = null;
@@ -60,6 +65,7 @@ public static class OnlineRoomSession
         ExpectedMatchPlayerCount = 0;
     }
 
+    // Resets this view back to an empty state.
     public static void Clear()
     {
         RoomId = null;

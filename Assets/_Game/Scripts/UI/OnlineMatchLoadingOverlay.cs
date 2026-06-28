@@ -12,6 +12,7 @@ public static class OnlineMatchLoadingOverlay
 
     public static bool IsVisible => loadingPanel != null && loadingPanel.gameObject.activeSelf;
 
+    // Displays this view with the supplied data.
     public static void Show(float progress = 0f)
     {
         EnsurePanel();
@@ -25,6 +26,7 @@ public static class OnlineMatchLoadingOverlay
         SetProgress(progress);
     }
 
+    // Updates the progress.
     public static void SetProgress(float progress)
     {
         if (loadingPanel == null)
@@ -35,6 +37,7 @@ public static class OnlineMatchLoadingOverlay
         loadingPanel.SetProgress(progress);
     }
 
+    // Hides this runtime UI element.
     public static void Hide()
     {
         if (loadingCanvas == null)
@@ -48,6 +51,7 @@ public static class OnlineMatchLoadingOverlay
         loadingPanel = null;
     }
 
+    // Loads the requested scene.
     public static void LoadScene(string sceneName)
     {
         GameObject runnerObject = new GameObject("Online Match Scene Loading Runner");
@@ -55,6 +59,7 @@ public static class OnlineMatchLoadingOverlay
         runnerObject.AddComponent<OnlineMatchSceneLoadingRunner>().Load(sceneName);
     }
 
+    // Ensures the panel is ready.
     private static void EnsurePanel()
     {
         if (loadingPanel != null && loadingCanvas != null)
@@ -90,11 +95,13 @@ public static class OnlineMatchLoadingOverlay
 
 public class OnlineMatchSceneLoadingRunner : MonoBehaviour
 {
+    // Loads the.
     public void Load(string sceneName)
     {
         StartCoroutine(LoadRoutine(sceneName));
     }
 
+    // Runs the load coroutine.
     private IEnumerator LoadRoutine(string sceneName)
     {
         OnlineMatchLoadingOverlay.Show(0f);

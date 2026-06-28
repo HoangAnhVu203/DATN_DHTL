@@ -10,11 +10,13 @@ public class AuthService : MonoBehaviour
 
     public SupabaseConfig Config => config;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         SupabaseSession.SetConfig(config);
     }
 
+    // Creates an account, signs in, and loads the player profile.
     public IEnumerator SignUp(string email, string password, Action<bool, string> callback)
     {
         if (!HasValidConfig(callback))
@@ -64,6 +66,7 @@ public class AuthService : MonoBehaviour
         callback?.Invoke(true, "Đăng ký thành công.");
     }
 
+    // Signs in and loads the saved player profile.
     public IEnumerator SignIn(string email, string password, Action<bool, string> callback)
     {
         if (!HasValidConfig(callback))
@@ -145,6 +148,7 @@ public class AuthService : MonoBehaviour
         callback?.Invoke(true, SupabaseSession.DisplayName);
     }
 
+    // Signs out and clears the local player session.
     public IEnumerator SignOut(Action<bool, string> callback)
     {
         string accessToken = SupabaseSession.AccessToken;
@@ -186,11 +190,13 @@ public class AuthService : MonoBehaviour
         callback?.Invoke(true, "Đăng xuất thành công.");
     }
 
+    // Runs the cleanup player state after login step.
     private IEnumerator CleanupPlayerStateAfterLogin()
     {
         yield return CleanupPlayerState(SupabaseSession.AccessToken, "login");
     }
 
+    // Runs the cleanup player state step.
     private IEnumerator CleanupPlayerState(string accessToken, string context)
     {
         string url = $"{config.FunctionUrl}/cleanup_player_state";
@@ -217,6 +223,7 @@ public class AuthService : MonoBehaviour
         Debug.Log($"Cleanup during {context} completed: {responseText}");
     }
 
+    // Loads the user profile.
     private IEnumerator LoadUserProfile(string userId, Action<UserProfile> callback)
     {
         if (string.IsNullOrWhiteSpace(userId))
@@ -254,6 +261,7 @@ public class AuthService : MonoBehaviour
         callback?.Invoke(profiles[0]);
     }
 
+    // Checks whether valid config is available.
     private bool HasValidConfig(Action<bool, string> callback)
     {
         if (config == null)
@@ -271,6 +279,7 @@ public class AuthService : MonoBehaviour
         return true;
     }
 
+    // Turns request errors into a readable message.
     private string BuildErrorMessage(long statusCode, string requestError, string responseText)
     {
         if (!string.IsNullOrWhiteSpace(responseText))
@@ -316,6 +325,7 @@ public class AuthService : MonoBehaviour
         public string email;
         public UserMetadata user_metadata;
 
+        // Returns the display name.
         public string GetDisplayName()
         {
             if (user_metadata != null)
@@ -369,6 +379,7 @@ public class AuthService : MonoBehaviour
         public string avatar_url;
         public int coin;
 
+        // Returns the display name.
         public string GetDisplayName()
         {
             if (!string.IsNullOrWhiteSpace(display_name))
@@ -402,6 +413,7 @@ public class AuthService : MonoBehaviour
         return wrapper?.items ?? Array.Empty<T>();
     }
 
+    // Builds the default display name.
     private string BuildDefaultDisplayName(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -414,6 +426,7 @@ public class AuthService : MonoBehaviour
         return string.IsNullOrWhiteSpace(localPart) ? "Player" : localPart.Trim();
     }
 
+    // Builds the default username.
     private string BuildDefaultUsername(string email)
     {
         string source = BuildDefaultDisplayName(email).ToLowerInvariant();

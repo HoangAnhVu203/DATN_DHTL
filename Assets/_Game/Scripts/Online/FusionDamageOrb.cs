@@ -12,11 +12,13 @@ public class FusionDamageOrb : NetworkBehaviour
     public bool CanSimulateLocally => Object == null || !Object.IsValid || Object.HasStateAuthority;
     public bool IsNetworkSpawned => Object != null && Object.IsValid && Runner != null;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveReferences();
     }
 
+    // Initializes this object after Fusion spawns it.
     public override void Spawned()
     {
         ResolveReferences();
@@ -29,11 +31,13 @@ public class FusionDamageOrb : NetworkBehaviour
         ApplyNetworkDamageToLocal();
     }
 
+    // Keeps the local orb damage in sync with the network value.
     public override void Render()
     {
         ApplyNetworkDamageToLocal();
     }
 
+    // Updates the network damage.
     public void SetNetworkDamage(int damage)
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
@@ -45,6 +49,7 @@ public class FusionDamageOrb : NetworkBehaviour
         ApplyNetworkDamageToLocal();
     }
 
+    // Destroys the network orb.
     public void DestroyNetworkOrb(Vector3 hitPosition)
     {
         if (!IsNetworkSpawned || !Object.HasStateAuthority)
@@ -57,6 +62,7 @@ public class FusionDamageOrb : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // Runs the play hit vfx RPC.
     private void RPC_PlayHitVFX(Vector3 hitPosition)
     {
         if (damageOrb != null)
@@ -78,6 +84,7 @@ public class FusionDamageOrb : NetworkBehaviour
         }
     }
 
+    // Applies the network damage to local.
     private void ApplyNetworkDamageToLocal()
     {
         if (damageOrb != null && NetworkDamage > 0)

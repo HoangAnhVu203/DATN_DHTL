@@ -11,6 +11,7 @@ public static class OnlineMatchStats
     private static float matchStartRealtime;
     private static bool matchStarted;
 
+    // Moves the room into a running match.
     public static void StartMatch(string matchId, IEnumerable<RoomService.RoomPlayerData> players)
     {
         if (matchStarted && currentMatchId == matchId)
@@ -29,6 +30,7 @@ public static class OnlineMatchStats
         Debug.Log($"OnlineMatchStats: started match '{currentMatchId}'.");
     }
 
+    // Ensures the started is ready.
     public static void EnsureStarted()
     {
         if (matchStarted)
@@ -40,6 +42,7 @@ public static class OnlineMatchStats
         StartMatch(OnlineRoomSession.MatchId, OnlineRoomSession.Players);
     }
 
+    // Adds the damage.
     public static void AddDamage(string userId, int amount)
     {
         if (amount <= 0)
@@ -50,21 +53,25 @@ public static class OnlineMatchStats
         GetOrCreate(userId).damageDealt += amount;
     }
 
+    // Adds the kill.
     public static void AddKill(string userId)
     {
         GetOrCreate(userId).kills++;
     }
 
+    // Adds the down.
     public static void AddDown(string userId)
     {
         GetOrCreate(userId).downs++;
     }
 
+    // Adds the revive.
     public static void AddRevive(string userId)
     {
         GetOrCreate(userId).revives++;
     }
 
+    // Marks the dead.
     public static void MarkDead(string userId)
     {
         MatchPlayerStats stats = GetOrCreate(userId);
@@ -76,6 +83,7 @@ public static class OnlineMatchStats
         }
     }
 
+    // Adds the test win stats to host.
     public static void AddTestWinStatsToHost(int damage, int kills)
     {
         EnsureStarted();
@@ -112,11 +120,13 @@ public static class OnlineMatchStats
         );
     }
 
+    // Returns the stats.
     public static MatchPlayerStats GetStats(string userId)
     {
         return GetOrCreate(userId);
     }
 
+    // Returns the survive time seconds.
     public static int GetSurviveTimeSeconds(string userId)
     {
         MatchPlayerStats stats = GetOrCreate(userId);
@@ -124,6 +134,7 @@ public static class OnlineMatchStats
         return Mathf.Max(0, Mathf.FloorToInt(endTime - matchStartRealtime));
     }
 
+    // Returns the match elapsed seconds.
     public static int GetMatchElapsedSeconds()
     {
         if (!matchStarted)
@@ -139,6 +150,7 @@ public static class OnlineMatchStats
         return Mathf.Max(0, Mathf.FloorToInt(Time.realtimeSinceStartup - matchStartRealtime));
     }
 
+    // Applies the network event.
     public static void ApplyNetworkEvent(StatEventType eventType, string userId, int amount)
     {
         if (string.IsNullOrWhiteSpace(userId))
@@ -180,6 +192,7 @@ public static class OnlineMatchStats
         );
     }
 
+    // Registers the players.
     private static void RegisterPlayers(IEnumerable<RoomService.RoomPlayerData> players)
     {
         if (players == null)
@@ -199,6 +212,7 @@ public static class OnlineMatchStats
         }
     }
 
+    // Returns the leaderboard snapshot.
     public static List<MatchLeaderboardRow> GetLeaderboardSnapshot()
     {
         EnsureStarted();
@@ -248,6 +262,7 @@ public static class OnlineMatchStats
         return rows;
     }
 
+    // Returns the display name.
     private static string GetDisplayName(string userId)
     {
         if (!string.IsNullOrWhiteSpace(userId) && DisplayNameByUserId.TryGetValue(userId, out string displayName) && !string.IsNullOrWhiteSpace(displayName))
@@ -271,6 +286,7 @@ public static class OnlineMatchStats
         return string.IsNullOrWhiteSpace(userId) ? "Player" : userId;
     }
 
+    // Returns the best display name.
     private static string GetBestDisplayName(RoomService.RoomPlayerData player)
     {
         if (player == null)
@@ -286,6 +302,7 @@ public static class OnlineMatchStats
         return string.IsNullOrWhiteSpace(player.user_id) ? "Player" : player.user_id;
     }
 
+    // Returns the or create.
     private static MatchPlayerStats GetOrCreate(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId))

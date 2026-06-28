@@ -6,11 +6,13 @@ public class DropWeapons : MonoBehaviour
     public List<GameObject> weapons;
     private readonly List<WeaponInitialState> initialStates = new List<WeaponInitialState>();
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         CacheInitialStates();
     }
 
+    // Drops the sword.
     public void DropSword()
     {
         CacheInitialStates();
@@ -36,6 +38,7 @@ public class DropWeapons : MonoBehaviour
         }
     }
 
+    // Picks up the weapons.
     public void PickUpWeapons()
     {
         CacheInitialStates();

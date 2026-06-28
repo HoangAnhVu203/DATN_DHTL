@@ -11,11 +11,13 @@ public class EnemyVFXManager : MonoBehaviour
     public ParticleSystem beingHitVFX;
     public VisualEffect beingHitSplashVFX;
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         CacheBeingHitVFX();
     }
 
+    // Plays the enemy footstep burst effect.
     public void BurstFootStep()
     {
         if (footStep != null)
@@ -24,6 +26,7 @@ public class EnemyVFXManager : MonoBehaviour
         }
     }
 
+    // Plays the attack vfx.
     public void PlayAttackVFX()
     {
         if (attackVFX != null)
@@ -32,6 +35,7 @@ public class EnemyVFXManager : MonoBehaviour
         }
     }
 
+    // Plays the being hit vfx.
     public void PlayBeingHitVFX(Vector3 attackerPos)
     {
         CacheBeingHitVFX();

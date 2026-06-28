@@ -139,6 +139,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Updates the initial spawn.
     public void SetInitialSpawn(Vector3 position, Quaternion rotation, int spawnIndex)
     {
         initialSpawnPosition = position;
@@ -148,11 +149,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
         ApplyInitialSpawnPosition();
     }
 
+    // Sets up this component before gameplay starts.
     private void Awake()
     {
         ResolveReferences();
     }
 
+    // Initializes this object after Fusion spawns it.
     public override void Spawned()
     {
         ResolveReferences();
@@ -163,6 +166,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         RefreshDisplayNameView();
     }
 
+    // Cleans up this object after Fusion despawns it.
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         UnsubscribeHealth();
@@ -173,6 +177,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Restores runtime state when this component becomes active.
     private void OnEnable()
     {
         ResolveReferences();
@@ -186,11 +191,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Clears temporary state when this component is disabled.
     private void OnDisable()
     {
         UnsubscribeHealth();
     }
 
+    // Applies the authority state.
     private void ApplyAuthorityState()
     {
         ResolveReferences();
@@ -238,6 +245,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         );
     }
 
+    // Checks whether local control is available.
     private bool HasLocalControl()
     {
         if (Object == null || !Object.IsValid || Runner == null)
@@ -252,6 +260,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
                || Object.StateAuthority == localPlayer;
     }
 
+    // Runs the initialize revive state step.
     private void InitializeReviveState()
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority || ReviveStateInitialized)
@@ -312,6 +321,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         cameraBound = true;
     }
 
+    // Runs camera-facing visual work after normal updates.
     private void LateUpdate()
     {
         if (Object != null && Object.IsValid)
@@ -321,6 +331,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Updates the local identity if needed.
     private void SetLocalIdentityIfNeeded()
     {
         if (Object == null || !Object.IsValid || !Object.HasStateAuthority)
@@ -341,6 +352,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Returns the local display name.
     private string GetLocalDisplayName()
     {
         if (!string.IsNullOrWhiteSpace(SupabaseSession.DisplayName))
@@ -369,6 +381,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return "Player";
     }
 
+    // Refreshes the display name view.
     private void RefreshDisplayNameView()
     {
         if (!showDisplayName)
@@ -411,6 +424,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         RefreshNameplateHealthBar(mainCamera);
     }
 
+    // Ensures the display name text is ready.
     private void EnsureDisplayNameText()
     {
         if (displayNameText != null)
@@ -442,6 +456,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         displayNameText.gameObject.SetActive(true);
     }
 
+    // Refreshes the nameplate health bar.
     private void RefreshNameplateHealthBar(Camera mainCamera)
     {
         bool shouldShow = showNameplateHealthBar && (!HasLocalControl() || showLocalNameplateHealthBar);
@@ -510,6 +525,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Returns the nameplate max health.
     private int GetNameplateMaxHealth()
     {
         if (networkHealth != null && networkHealth.MaxHealth > 0)
@@ -520,6 +536,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return health != null ? health.maxHealth : 100;
     }
 
+    // Returns the nameplate current health.
     private int GetNameplateCurrentHealth(int maxHealth)
     {
         if (networkHealth != null && networkHealth.MaxHealth > 0)
@@ -530,6 +547,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return health != null ? health.currentHealth : maxHealth;
     }
 
+    // Ensures the health bar canvas is ready.
     private void EnsureHealthBarCanvas()
     {
         if (healthBarCanvas != null)
@@ -647,6 +665,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return null;
     }
 
+    // Applies the gameplay health bar style.
     private void ApplyGameplayHealthBarStyle()
     {
         if (!useGameplayHealthBarStyle)
@@ -665,6 +684,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         ApplyImageStyle(healthBarFillImage, style.fill);
     }
 
+    // Returns the gameplay health bar style.
     private static HealthBarStyle GetGameplayHealthBarStyle()
     {
         if (gameplayHealthBarStyleLoaded)
@@ -715,6 +735,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return null;
     }
 
+    // Applies the image style.
     private static void ApplyImageStyle(Image target, ImageStyle style)
     {
         if (target == null || !style.IsValid)
@@ -750,6 +771,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 
         public bool IsValid => sprite != null;
 
+        // Runs the from image step.
         public static ImageStyle FromImage(Image image)
         {
             if (image == null)
@@ -769,6 +791,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Returns the white sprite.
     private static Sprite GetWhiteSprite()
     {
         if (whiteSprite != null)
@@ -784,6 +807,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return whiteSprite;
     }
 
+    // Runs the per-frame work for this behaviour.
     private void Update()
     {
         if (IsDead())
@@ -795,6 +819,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         QueueKeyboardActions();
     }
 
+    // Runs this object on Fusion network ticks.
     public override void FixedUpdateNetwork()
     {
         if (!HasLocalControl() || characterController == null || !characterController.enabled)
@@ -824,6 +849,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         MoveLocalPlayer(Runner.DeltaTime);
     }
 
+    // Mirrors networked animation values onto remote player avatars.
     public override void Render()
     {
         if (animator == null || HasLocalControl())
@@ -836,6 +862,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         animator.SetBool(IsGroundedParameter, NetworkedGrounded);
     }
 
+    // Requests attack from the owning system.
     public void RequestAttack()
     {
         if (!HasLocalControl() || IsDead())
@@ -846,6 +873,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         attackQueued = true;
     }
 
+    // Requests slide from the owning system.
     public void RequestSlide()
     {
         if (!HasLocalControl() || IsDead())
@@ -856,6 +884,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         slideQueued = true;
     }
 
+    // Requests damage from the owning system.
     public bool RequestDamage(int damage, Vector3 attackPosition, int damageSourceId = 0)
     {
         if (damage <= 0 || Object == null || !Object.IsValid)
@@ -867,6 +896,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Requests pickup from the owning system.
     public void RequestPickup(PickUpType pickupType, int value)
     {
         if (value <= 0 || Object == null || !Object.IsValid)
@@ -877,6 +907,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         RPC_ApplyPickup((int)pickupType, value);
     }
 
+    // Requests revive target from the owning system.
     public void RequestReviveTarget(FusionPlayerAvatar target)
     {
         if (target == null || !CanReviveOthers)
@@ -887,6 +918,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         target.RPC_RequestRevive(NetworkPlayerRef);
     }
 
+    // Broadcasts the match result.
     public bool BroadcastMatchResult(GameState resultState)
     {
         if (resultState != GameState.Victory && resultState != GameState.Lose)
@@ -903,6 +935,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Broadcasts the match stat event.
     public static bool BroadcastMatchStatEvent(OnlineMatchStats.StatEventType eventType, string userId, int amount = 1)
     {
         if (string.IsNullOrWhiteSpace(userId))
@@ -928,6 +961,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return false;
     }
 
+    // Returns the user id for player ref.
     public static string GetUserIdForPlayerRef(NetworkRunner runner, PlayerRef playerRef)
     {
         if (runner != null
@@ -961,6 +995,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return null;
     }
 
+    // Broadcasts the match stat.
     public bool BroadcastMatchStat(OnlineMatchStats.StatEventType eventType, string userId, int amount = 1)
     {
         if (Object == null || !Object.IsValid || string.IsNullOrWhiteSpace(userId))
@@ -973,6 +1008,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Moves the local player.
     private void MoveLocalPlayer(float deltaTime)
     {
         if (deltaTime <= 0f)
@@ -1056,6 +1092,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Checks whether movement input is currently locked.
     private bool IsInputMovementLocked()
     {
         return IsDead()
@@ -1065,6 +1102,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
             || hurtMovementLockTimer > 0f;
     }
 
+    // Updates the hurt movement lock.
     private void UpdateHurtMovementLock(float deltaTime)
     {
         if (hurtMovementLockTimer <= 0f)
@@ -1085,6 +1123,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Applies the initial spawn position.
     private void ApplyInitialSpawnPosition()
     {
         if (initialSpawnIndex < 0 || !HasLocalControl())
@@ -1108,6 +1147,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Returns the move input.
     private Vector3 GetMoveInput(float deltaTime)
     {
         Vector3 keyboardDirection = ReadKeyboardMoveInput();
@@ -1138,6 +1178,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return hasJoystickInput ? Vector3.ClampMagnitude(joystickDirection, 1f) : Vector3.zero;
     }
 
+    // Reads keyboard movement for the local network avatar.
     private Vector3 ReadKeyboardMoveInput()
     {
         Vector3 direction = Vector3.zero;
@@ -1190,6 +1231,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return Vector3.ClampMagnitude(direction, 1f);
     }
 
+    // Queues the keyboard actions.
     private void QueueKeyboardActions()
     {
         if (!HasLocalControl() || IsDead())
@@ -1225,6 +1267,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
 #endif
     }
 
+    // Consumes the queued actions.
     private void ConsumeQueuedActions()
     {
         if (attackQueued)
@@ -1240,6 +1283,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Tries to start attack.
     private void TryStartAttack()
     {
         if (IsInputMovementLocked() || slideTimer > 0f)
@@ -1254,6 +1298,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         RPC_PlayAttack();
     }
 
+    // Tries to start slide.
     private void TryStartSlide()
     {
         if (IsInputMovementLocked() || slideTimer > 0f)
@@ -1275,6 +1320,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         RPC_PlaySlide();
     }
 
+    // Updates the attack damage window.
     private void UpdateAttackDamageWindow(float deltaTime)
     {
         if (damageCaster == null || attackTimer <= 0f || IsDead())
@@ -1305,6 +1351,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // Runs the play attack RPC.
     private void RPC_PlayAttack()
     {
         if (animator != null)
@@ -1314,6 +1361,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Starts the attack action when the character can act.
     public void AttackAnimationEnds()
     {
         attackTimer = 0f;
@@ -1323,6 +1371,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // Runs the play slide RPC.
     private void RPC_PlaySlide()
     {
         if (animator != null)
@@ -1332,6 +1381,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the apply damage RPC.
     private void RPC_ApplyDamage(int damage, Vector3 attackPosition, int damageSourceId)
     {
         ResolveReferences();
@@ -1368,6 +1418,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Starts the hurt movement lock process.
     private void StartHurtMovementLock()
     {
         if (IsDead())
@@ -1381,6 +1432,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the apply pickup RPC.
     private void RPC_ApplyPickup(int pickupType, int value)
     {
         ResolveReferences();
@@ -1396,6 +1448,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the request revive RPC.
     private void RPC_RequestRevive(PlayerRef reviver)
     {
         ResolveReferences();
@@ -1452,11 +1505,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    // Runs the apply revive RPC.
     private void RPC_ApplyRevive(int reviveHealth)
     {
         ApplyNetworkRevive(reviveHealth);
     }
 
+    // Broadcasts the spawner cleared.
     public bool BroadcastSpawnerCleared(int spawnerNetworkId)
     {
         if (Object == null || !Object.IsValid)
@@ -1468,6 +1523,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Broadcasts the spawner spawn requested.
     public bool BroadcastSpawnerSpawnRequested(int spawnerNetworkId)
     {
         if (Object == null || !Object.IsValid)
@@ -1479,6 +1535,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Requests spawner spawn on state authority from the owning system.
     public bool RequestSpawnerSpawnOnStateAuthority(int spawnerNetworkId)
     {
         if (Object == null || !Object.IsValid)
@@ -1490,6 +1547,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         return true;
     }
 
+    // Broadcasts the pickup collected.
     public void BroadcastPickupCollected(int pickupNetworkId, Vector3 collectPosition)
     {
         if (Object == null || !Object.IsValid)
@@ -1501,30 +1559,35 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
+    // Runs the open spawner gates RPC.
     private void RPC_OpenSpawnerGates(int spawnerNetworkId)
     {
         Spawner.OpenGatesForNetworkId(spawnerNetworkId);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
+    // Runs the request spawner spawn RPC.
     private void RPC_RequestSpawnerSpawn(int spawnerNetworkId, PlayerRef activatingPlayer)
     {
         Spawner.SpawnForNetworkId(spawnerNetworkId, activatingPlayer);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    // Runs the request spawner spawn on state authority RPC.
     private void RPC_RequestSpawnerSpawnOnStateAuthority(int spawnerNetworkId)
     {
         Spawner.SpawnForNetworkId(spawnerNetworkId, NetworkPlayerRef);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
+    // Runs the collect local pickup RPC.
     private void RPC_CollectLocalPickup(int pickupNetworkId, Vector3 collectPosition)
     {
         PickUp.CollectLocalPickupForNetworkId(pickupNetworkId, collectPosition);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
+    // Runs the apply match result RPC.
     private void RPC_ApplyMatchResult(int resultStateValue)
     {
         GameState resultState = (GameState)resultStateValue;
@@ -1532,11 +1595,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
+    // Runs the report match stat RPC.
     private void RPC_ReportMatchStat(int eventTypeValue, NetworkString<_64> userId, int amount)
     {
         OnlineMatchStats.ApplyNetworkEvent((OnlineMatchStats.StatEventType)eventTypeValue, userId.ToString(), amount);
     }
 
+    // Subscribes to health events.
     private void SubscribeHealth()
     {
         if (health == null)
@@ -1548,6 +1613,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         health.HealthChanged += OnHealthChanged;
     }
 
+    // Unsubscribes from health events.
     private void UnsubscribeHealth()
     {
         if (health != null)
@@ -1556,6 +1622,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Updates cached health after a health change.
     private void OnHealthChanged(int current, int max)
     {
         if (current > 0 || hasAppliedNetworkDeath)
@@ -1566,11 +1633,13 @@ public class FusionPlayerAvatar : NetworkBehaviour
         ApplyNetworkDeath();
     }
 
+    // Checks whether this avatar is dead.
     private bool IsDead()
     {
         return health != null && health.IsDead;
     }
 
+    // Applies the network death.
     private void ApplyNetworkDeath()
     {
         if (hasAppliedNetworkDeath)
@@ -1621,6 +1690,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Applies the network revive.
     private void ApplyNetworkRevive(int reviveHealth)
     {
         ResolveReferences();
@@ -1646,6 +1716,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Stops the local control after death process.
     private void StopLocalControlAfterDeath()
     {
         ClearLocalActions();
@@ -1662,6 +1733,7 @@ public class FusionPlayerAvatar : NetworkBehaviour
         }
     }
 
+    // Clears the local actions.
     private void ClearLocalActions()
     {
         attackQueued = false;
